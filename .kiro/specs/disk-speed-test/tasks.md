@@ -34,21 +34,21 @@
   - Write tests for progress callback functionality
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
-- [ ] 6. Implement Windows platform-specific operations
+- [x] 6. Implement Windows platform-specific operations
   - Implement device enumeration using GetLogicalDrives() and GetDriveType()
   - Create direct I/O file operations using FILE_FLAG_NO_BUFFERING and FILE_FLAG_WRITE_THROUGH
   - Implement app data directory resolution using %LOCALAPPDATA%
   - Add Windows-specific error handling and file system synchronization
   - _Requirements: 3.1, 3.2, 3.3, 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 7. Implement macOS platform-specific operations
+- [x] 7. Implement macOS platform-specific operations
   - Implement device enumeration via /Volumes and system APIs
   - Create direct I/O using F_NOCACHE fcntl flag and F_FULLFSYNC for synchronization
   - Implement app data directory resolution using ~/Library/Application Support
   - Add macOS-specific error handling and file system operations
   - _Requirements: 3.1, 3.2, 3.3, 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 8. Implement Linux platform-specific operations
+- [x] 8. Implement Linux platform-specific operations
   - Implement device enumeration by parsing /proc/mounts and /sys/block
   - Create direct I/O using O_DIRECT and O_SYNC flags
   - Implement app data directory resolution using ~/.local/share
