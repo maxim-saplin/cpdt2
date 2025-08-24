@@ -1,0 +1,48 @@
+[package]
+name = "disk-speed-test"
+version = "0.1.0"
+edition = "2021"
+authors = ["Disk Speed Test Team"]
+description = "Cross-platform disk speed testing utility"
+license = "MIT"
+repository = "https://github.com/example/disk-speed-test"
+
+[lib]
+name = "disk_speed_test"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "disk-speed-test"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+anyhow = "1.0"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["fileapi", "winbase", "handleapi", "errhandlingapi"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+android_logger = "0.13"
+
+[target.'cfg(target_os = "ios")'.dependencies]
+objc = "0.2"
+
+[dev-dependencies]
+tempfile = "3.0"
+criterion = "0.5"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
