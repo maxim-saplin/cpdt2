@@ -95,7 +95,7 @@
   - Write unit tests for memory copy performance measurement
   - _Requirements: 6.1, 6.2, 6.3, 8.1, 8.2, 8.3, 10.5, 10.6_
 
-- [ ] 14. Implement core benchmark orchestration
+- [x] 14. Implement core benchmark orchestration
   - Create main run_benchmark function that executes all five tests in sequence
   - Implement proper test file cleanup after completion or failure
   - Add error handling and recovery for each test type
@@ -103,7 +103,7 @@
   - Write integration tests for complete benchmark execution
   - _Requirements: 2.1, 2.2, 7.4, 8.4, 11.4, 11.5_
 
-- [ ] 15. Implement CLI argument parsing
+- [x] 15. Implement CLI argument parsing
   - Create command line argument parser for all configuration options
   - Implement list-devices command with proper device enumeration
   - Add benchmark command with target path and all optional parameters
@@ -111,7 +111,7 @@
   - Write tests for argument parsing and validation
   - _Requirements: 1.2, 3.1, 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 16. Implement CLI display and output formatting
+- [x] 16. Implement CLI display and output formatting
   - Create real-time display system showing current test and speed
   - Implement results table formatting with Min, Max, and bold average speeds
   - Add progress indicators and clear test status updates
