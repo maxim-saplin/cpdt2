@@ -86,7 +86,7 @@ This feature involves creating a cross-platform disk speed test utility that can
 
 #### Acceptance Criteria
 
-1. WHEN any test completes THEN it SHALL report minimum speed in MB/s
+1. WHEN any test completes THEN it SHALL report low-percentile speed (P5) in MB/s
 2. WHEN any test completes THEN it SHALL report maximum speed in MB/s
 3. WHEN any test completes THEN it SHALL report average speed in MB/s with bold formatting
 4. WHEN tests run THEN they SHALL collect sufficient samples to provide meaningful statistics
@@ -114,7 +114,7 @@ This feature involves creating a cross-platform disk speed test utility that can
 3. WHEN Random Write test is running THEN it SHALL display "Random Write" and current speed in MB/s
 4. WHEN Random Read test is running THEN it SHALL display "Random Read" and current speed in MB/s
 5. WHEN Memory Copy test is running THEN it SHALL display "Memory Copy" and current speed in MB/s
-6. WHEN each test completes THEN the display SHALL update to show Min, Max, and average (bold) speeds
+6. WHEN each test completes THEN the display SHALL update to show P5, P95, and average (bold) speeds
 
 ### Requirement 11
 
@@ -123,7 +123,7 @@ This feature involves creating a cross-platform disk speed test utility that can
 #### Acceptance Criteria
 
 1. WHEN any test is running THEN the utility SHALL display the current test name and real-time speed in MB/s
-2. WHEN tests complete THEN results SHALL show Min, Max, and average (bold) speeds in MB/s for each test
+2. WHEN tests complete THEN results SHALL show P5, P95, and average (bold) speeds in MB/s for each test
 3. WHEN all tests complete THEN results SHALL be formatted in a clear table showing Sequential Write, Sequential Read, Random Write, Random Read, and Memory Copy results
 4. WHEN errors occur THEN they SHALL be reported with helpful diagnostic information
 5. WHEN tests fail THEN the utility SHALL provide guidance on potential causes

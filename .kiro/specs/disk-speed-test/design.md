@@ -159,8 +159,8 @@ sequenceDiagram
 ### Statistics Collection
 
 Each test will collect performance samples at regular intervals (every 100ms) to calculate:
-- **Minimum Speed**: Lowest recorded speed during the test
-- **Maximum Speed**: Highest recorded speed during the test  
+- **Low-percentile Speed (P5)**: 5th percentile of recorded speed samples
+- **High-percentile Speed (P95)**: 95th percentile of recorded speeds  
 - **Average Speed**: Mean of all collected samples
 - **Sample Count**: Number of measurements taken
 

@@ -215,8 +215,8 @@ fn test_cli_benchmark_csv_output() {
     let lines: Vec<&str> = stdout.lines().collect();
     assert!(!lines.is_empty(), "CSV output should not be empty");
     
-    // Should have header
-    assert!(lines[0].contains("Test,Min (MB/s),Max (MB/s),Avg (MB/s)"));
+    // Should have header (P5 and P95)
+    assert!(lines[0].contains("Test,P5 (MB/s),P95 (MB/s),Avg (MB/s)"));
     
     // Should have data rows for each test
     assert!(lines.iter().any(|line| line.starts_with("Sequential Write,")));

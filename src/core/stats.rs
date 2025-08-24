@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 /// Results from a single test execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestResult {
-    /// Minimum speed recorded during the test (MB/s)
+    /// Low-percentile speed (P5) recorded during the test (MB/s)
     pub min_speed_mbps: f64,
     
     /// Maximum speed recorded during the test (MB/s)
@@ -166,14 +166,36 @@ impl StatisticsCollector {
         self.start_time.elapsed()
     }
     
+    /// Compute percentile using the nearest-rank method
+    /// p is in [0, 100]
+    fn percentile_nearest_rank(mut samples: Vec<f64>, p: f64) -> f64 {
+        if samples.is_empty() {
+            return 0.0;
+        }
+        let clamped_p = if p.is_finite() { p.clamp(0.0, 100.0) } else { 0.0 };
+        samples.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        if clamped_p == 0.0 {
+            return samples[0];
+        }
+        if clamped_p == 100.0 {
+            return samples[samples.len() - 1];
+        }
+        let n = samples.len();
+        let rank = (clamped_p / 100.0 * n as f64).ceil() as usize;
+        let idx = rank.max(1) - 1; // nearest-rank index
+        samples[idx]
+    }
+
     /// Finalize collection and return test results
     pub fn finalize(self) -> TestResult {
         if self.samples.is_empty() {
             return TestResult::default();
         }
         
-        let min_speed = self.samples.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let max_speed = self.samples.iter().fold(0.0f64, |a, &b| a.max(b));
+        // Use P5 instead of absolute minimum to reduce sensitivity to outliers
+        let min_speed = Self::percentile_nearest_rank(self.samples.clone(), 5.0);
+        // Use P95 instead of absolute maximum
+        let max_speed = Self::percentile_nearest_rank(self.samples.clone(), 95.0);
         let avg_speed = self.samples.iter().sum::<f64>() / self.samples.len() as f64;
         
         TestResult::new(
@@ -219,6 +241,22 @@ impl RealTimeStatsTracker {
             collector: StatisticsCollector::with_sample_interval(sample_interval),
             last_bytes: 0,
             last_sample_time: Instant::now(),
+        }
+    }
+    
+    /// Record a single block operation as a sample using its size and duration
+    /// Returns the block speed (MB/s) if it's time to report progress, otherwise None
+    pub fn record_block(&mut self, bytes: usize, duration: Duration) -> Option<f64> {
+        if duration.is_zero() || bytes == 0 {
+            return None;
+        }
+        let speed = StatisticsCollector::calculate_speed_mbps(bytes as u64, duration);
+        self.collector.add_sample(speed);
+        if self.last_sample_time.elapsed() >= self.collector.sample_interval {
+            self.last_sample_time = Instant::now();
+            Some(speed)
+        } else {
+            None
         }
     }
     
@@ -269,9 +307,8 @@ impl RealTimeStatsTracker {
     }
     
     /// Finalize and get test results
-    pub fn finalize(mut self) -> TestResult {
-        // Take a final sample
-        self.collector.force_sample();
+    pub fn finalize(self) -> TestResult {
+        // Do not force a synthetic final sample; rely on recorded block samples
         self.collector.finalize()
     }
 }

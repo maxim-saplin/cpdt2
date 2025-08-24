@@ -184,7 +184,7 @@ impl ProgressCallback for CliProgressCallback {
     }
     
     fn on_test_complete(&self, test_name: &str, result: &TestResult) {
-        // Requirement 10.6: Show Min, Max, and average (bold) speeds when test completes
+        // Requirement 10.6: Show P5 (low-percentile), Max, and average (bold) speeds when test completes
         
         match self.output_format {
             OutputFormat::Table => {
@@ -205,7 +205,7 @@ impl ProgressCallback for CliProgressCallback {
                 };
                 
                 println!("  {} {} complete", checkmark, colored_name);
-                println!("    Min: {} | Max: {} | Avg: {}", 
+                println!("    P5: {} | P95: {} | Avg: {}", 
                          self.colorize(&min_speed, "37"), // Light gray
                          self.colorize(&max_speed, "37"), // Light gray  
                          bold_avg);
@@ -324,7 +324,7 @@ pub fn display_error(error: &BenchmarkError) {
 }
 
 /// Display benchmark results as a formatted table
-/// Requirements 11.1, 11.2, 11.3: Clear table showing all test results with Min, Max, and bold average speeds
+/// Requirements 11.1, 11.2, 11.3: Clear table showing all test results with P5, Max, and bold average speeds
 fn display_results_table(results: &BenchmarkResults) {
     let use_colors = atty::is(atty::Stream::Stdout);
     
@@ -345,8 +345,8 @@ fn display_results_table(results: &BenchmarkResults) {
     // Table header with better formatting
     println!("{:<20} {:>12} {:>12} {:>12} {:>10} {:>8}", 
              colorize("Test", "1;37"), // Bold white
-             colorize("Min (MB/s)", "37"), // Light gray
-             colorize("Max (MB/s)", "37"), // Light gray
+             colorize("P5 (MB/s)", "37"), // Light gray
+             colorize("P95 (MB/s)", "37"), // Light gray
              colorize("Avg (MB/s)", "1;33"), // Bold yellow for average
              colorize("Duration", "37"), // Light gray
              colorize("Samples", "37")); // Light gray
@@ -509,8 +509,8 @@ pub fn format_results_json(results: &BenchmarkResults) -> Result<String, serde_j
 pub fn format_results_csv(results: &BenchmarkResults) -> String {
     let mut csv = String::new();
     
-    // Enhanced CSV header with more information
-    csv.push_str("Test,Min (MB/s),Max (MB/s),Avg (MB/s),Duration (s),Samples\n");
+    // Enhanced CSV header with more information (P5 replaces Min)
+    csv.push_str("Test,P5 (MB/s),P95 (MB/s),Avg (MB/s),Duration (s),Samples\n");
     
     // Helper function to format a test result as CSV row
     let format_test_csv = |name: &str, result: &TestResult| -> String {

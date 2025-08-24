@@ -9,7 +9,7 @@ A cross-platform disk speed testing utility that measures sequential and random 
 - Random read/write tests with configurable block sizes  
 - Memory copy performance testing
 - Real-time progress reporting
-- Comprehensive statistics (min/max/average speeds)
+- Comprehensive statistics (P5/P95/average speeds)
 - Direct I/O to bypass OS caching
 - Command-line interface with device listing
 

@@ -113,7 +113,7 @@
 
 - [x] 16. Implement CLI display and output formatting
   - Create real-time display system showing current test and speed
-  - Implement results table formatting with Min, Max, and bold average speeds
+  - Implement results table formatting with P5, P95, and bold average speeds
   - Add progress indicators and clear test status updates
   - Implement error message display with helpful diagnostic information
   - Write tests for output formatting and display logic
