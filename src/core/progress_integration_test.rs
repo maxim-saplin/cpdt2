@@ -127,7 +127,7 @@ mod integration_tests {
         }
         
         // Should have approximately 5 successful updates (500ms / 100ms interval)
-        assert!(successful_updates >= 4 && successful_updates <= 6, 
+        assert!((4..=6).contains(&successful_updates), 
                 "Expected 4-6 successful updates, got {}", successful_updates);
         
         // Force final progress update

@@ -2,10 +2,9 @@
 
 #[cfg(test)]
 mod tests {
-    use super::super::{PlatformOps, StorageDevice, DeviceType, PlatformError};
+    use super::super::{StorageDevice, DeviceType, PlatformError};
     use super::super::mock_platform::{MockPlatform, MockFileResult};
-    use std::path::{Path, PathBuf};
-    use tempfile::TempDir;
+    use std::path::PathBuf;
 
     #[test]
     fn test_device_enumeration_errors() {

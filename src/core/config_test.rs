@@ -36,9 +36,7 @@ mod tests {
 
     #[test]
     fn test_file_size_bytes_calculation() {
-        let mut config = BenchmarkConfig::default();
-        
-        config.file_size_mb = 1;
+        let mut config = BenchmarkConfig { file_size_mb: 1, ..Default::default() };
         assert_eq!(config.file_size_bytes(), 1024 * 1024);
         
         config.file_size_mb = 100;

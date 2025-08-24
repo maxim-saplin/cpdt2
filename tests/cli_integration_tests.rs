@@ -284,7 +284,7 @@ fn test_cli_argument_parsing() {
     // Test various argument combinations to ensure parsing works correctly
     // Use non-existent path to fail quickly at validation, not during benchmark execution
     
-    let test_cases = vec![
+    let test_cases = [
         // Basic case
         vec!["benchmark", "/nonexistent/test/path", "--duration", "1", "--file-size", "1MB"],
         

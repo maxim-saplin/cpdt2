@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn test_statistics_collector_percentile_calculation() {
-        let mut samples = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        let samples = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
         
         // Test P5 (5th percentile)
         let p5 = StatisticsCollector::test_percentile_nearest_rank(samples.clone(), 5.0);
@@ -218,14 +218,14 @@ mod tests {
         
         // Test initial state
         assert_eq!(tracker.current_average_speed(), 0.0);
-        let (min, max, avg, count) = tracker.current_stats();
+        let (_min, _max, _avg, count) = tracker.current_stats();
         assert_eq!(count, 0);
         
         // Record some blocks
-        let block_speed = tracker.record_block(1024, Duration::from_millis(10));
+        let _block_speed = tracker.record_block(1024, Duration::from_millis(10));
         // May or may not return a speed depending on timing
         
-        let (min, max, avg, count) = tracker.current_stats();
+        let (_min, _max, _avg, count) = tracker.current_stats();
         assert_eq!(count, 1);
     }
 
@@ -242,7 +242,7 @@ mod tests {
         let sample_taken = tracker.update_progress(2048);
         assert!(sample_taken.is_some());
         
-        let (min, max, avg, count) = tracker.current_stats();
+        let (_min, _max, _avg, count) = tracker.current_stats();
         assert_eq!(count, 1);
     }
 

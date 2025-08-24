@@ -434,7 +434,7 @@ pub fn run_memory_copy_test(
     Ok(result)
 }
 #[cfg(test)]
-mod tests {
+mod core_tests {
     use super::*;
     use crate::core::TestProgressCallback;
     use std::fs;
@@ -1357,9 +1357,18 @@ mod tests {
         let result = run_random_write_test(&config, &test_file_path, None);
         
         // Cleanup (restore write permissions first)
-        let mut perms = std::fs::metadata(&test_file_path).unwrap().permissions();
-        perms.set_readonly(false);
-        let _ = std::fs::set_permissions(&test_file_path, perms);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = std::fs::Permissions::from_mode(0o644);
+            let _ = std::fs::set_permissions(&test_file_path, perms);
+        }
+        #[cfg(not(unix))]
+        {
+            let mut perms = std::fs::metadata(&test_file_path).unwrap().permissions();
+            perms.set_readonly(false);
+            let _ = std::fs::set_permissions(&test_file_path, perms);
+        }
         cleanup_test_file(&test_file_path);
 
         // Should return an error for read-only file

@@ -2,9 +2,9 @@
 
 #[cfg(test)]
 mod tests {
-    use super::super::{PlatformOps, StorageDevice, DeviceType, PlatformError};
+    use super::super::{StorageDevice, DeviceType, PlatformError};
     use super::super::mock_platform::{MockPlatform, MockFileResult};
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
 
     // Android platform tests
     mod android_tests {

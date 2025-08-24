@@ -63,7 +63,7 @@ impl TestEnvironment {
     }
 
     /// Create a test environment with default configuration
-    pub fn default() -> Result<Self> {
+    pub fn with_defaults() -> Result<Self> {
         Self::new(TestEnvironmentConfig::default())
     }
 
@@ -127,10 +127,7 @@ impl TestEnvironment {
     pub fn should_skip_test(&self, test_name: &str) -> bool {
         if self.config.skip_privileged_tests {
             // Skip tests that might require elevated permissions
-            match test_name {
-                "direct_io_test" | "device_enumeration_test" | "system_drive_test" => true,
-                _ => false,
-            }
+            matches!(test_name, "direct_io_test" | "device_enumeration_test" | "system_drive_test")
         } else {
             false
         }
@@ -200,6 +197,12 @@ pub struct TestEnvironmentBuilder {
     config: TestEnvironmentConfig,
 }
 
+impl Default for TestEnvironmentBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestEnvironmentBuilder {
     pub fn new() -> Self {
         Self {
@@ -244,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_environment_creation() {
-        let env = TestEnvironment::default().unwrap();
+        let env = TestEnvironment::with_defaults().unwrap();
         assert!(env.data_manager.temp_dir_path().exists());
     }
 
@@ -264,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_benchmark_config_creation() {
-        let env = TestEnvironment::default().unwrap();
+        let env = TestEnvironment::with_defaults().unwrap();
         let config = env.create_test_benchmark_config(None);
         
         assert_eq!(config.sequential_block_size, 64 * 1024); // Small file mode
@@ -287,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_result_recording() {
-        let env = TestEnvironment::default().unwrap();
+        let env = TestEnvironment::with_defaults().unwrap();
         
         let test_result = TestResult {
             min_speed_mbps: 10.0,

@@ -4,10 +4,8 @@
 mod tests {
     #[cfg(target_os = "linux")]
     use super::super::linux::LinuxPlatform;
-    use super::super::{PlatformOps, StorageDevice, DeviceType, PlatformError};
-    use std::path::{Path, PathBuf};
-    use std::fs;
-    use std::io::Write;
+    use super::super::{DeviceType, PlatformError};
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     #[test]

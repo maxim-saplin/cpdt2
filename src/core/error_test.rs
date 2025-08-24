@@ -252,12 +252,7 @@ mod tests {
     #[test]
     fn test_error_in_option_context() {
         // Test error handling in Option contexts
-        let maybe_error: Option<BenchmarkError> = Some(
-            BenchmarkError::TestInterrupted("Cancelled".to_string())
-        );
-        
-        assert!(maybe_error.is_some());
-        let error = maybe_error.unwrap();
+        let error = BenchmarkError::TestInterrupted("Cancelled".to_string());
         assert!(error.to_string().contains("Cancelled"));
     }
 

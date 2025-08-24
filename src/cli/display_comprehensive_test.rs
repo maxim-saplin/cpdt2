@@ -345,7 +345,7 @@ mod tests {
         let callback = CliProgressCallback::new(OutputFormat::Table);
         let results = create_comprehensive_test_results();
         
-        let test_names = vec![
+        let test_names = [
             "Sequential Write",
             "Sequential Read", 
             "Random Write",
@@ -353,7 +353,7 @@ mod tests {
             "Memory Copy",
         ];
         
-        let test_results = vec![
+        let test_results = [
             &results.sequential_write,
             &results.sequential_read,
             &results.random_write,

@@ -4,9 +4,8 @@
 mod tests {
     #[cfg(target_os = "windows")]
     use super::super::windows::WindowsPlatform;
-    use super::super::{PlatformOps, StorageDevice, DeviceType, PlatformError};
-    use std::path::{Path, PathBuf};
-    use std::fs;
+    use super::super::{DeviceType, PlatformError};
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     #[test]
@@ -252,7 +251,7 @@ mod tests {
     #[test]
     fn test_windows_mock_device_enumeration() {
         // This test uses mock data to test Windows-specific logic without requiring Windows
-        use super::super::mock_platform::{MockPlatform, MockFileResult};
+        use super::super::mock_platform::MockPlatform;
         
         let mock = MockPlatform::new();
         mock.clear_devices();

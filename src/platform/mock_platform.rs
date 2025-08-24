@@ -36,32 +36,29 @@ impl Default for MockPlatform {
 impl MockPlatform {
     /// Create a new mock platform with default test data
     pub fn new() -> Self {
-        let mut devices = Vec::new();
-        
-        // Add some default test devices
-        devices.push(StorageDevice {
-            name: "System Drive".to_string(),
-            mount_point: PathBuf::from("/"),
-            total_space: 1024 * 1024 * 1024 * 1024, // 1TB
-            available_space: 512 * 1024 * 1024 * 1024, // 512GB
-            device_type: DeviceType::SolidState,
-        });
-        
-        devices.push(StorageDevice {
-            name: "Data Drive".to_string(),
-            mount_point: PathBuf::from("/data"),
-            total_space: 2 * 1024 * 1024 * 1024 * 1024, // 2TB
-            available_space: 1024 * 1024 * 1024 * 1024, // 1TB
-            device_type: DeviceType::HardDisk,
-        });
-        
-        devices.push(StorageDevice {
-            name: "USB Drive".to_string(),
-            mount_point: PathBuf::from("/media/usb"),
-            total_space: 32 * 1024 * 1024 * 1024, // 32GB
-            available_space: 16 * 1024 * 1024 * 1024, // 16GB
-            device_type: DeviceType::Removable,
-        });
+        let devices = vec![
+            StorageDevice {
+                name: "System Drive".to_string(),
+                mount_point: PathBuf::from("/"),
+                total_space: 1024 * 1024 * 1024 * 1024, // 1TB
+                available_space: 512 * 1024 * 1024 * 1024, // 512GB
+                device_type: DeviceType::SolidState,
+            },
+            StorageDevice {
+                name: "Data Drive".to_string(),
+                mount_point: PathBuf::from("/data"),
+                total_space: 2 * 1024 * 1024 * 1024 * 1024, // 2TB
+                available_space: 1024 * 1024 * 1024 * 1024, // 1TB
+                device_type: DeviceType::HardDisk,
+            },
+            StorageDevice {
+                name: "USB Drive".to_string(),
+                mount_point: PathBuf::from("/media/usb"),
+                total_space: 32 * 1024 * 1024 * 1024, // 32GB
+                available_space: 16 * 1024 * 1024 * 1024, // 16GB
+                device_type: DeviceType::Removable,
+            },
+        ];
         
         Self {
             devices: Arc::new(Mutex::new(devices)),
@@ -398,7 +395,7 @@ mod tests {
         mock.clear_devices();
         
         // Add devices of different types
-        let device_types = vec![
+        let device_types = [
             DeviceType::HardDisk,
             DeviceType::SolidState,
             DeviceType::Removable,
@@ -422,9 +419,9 @@ mod tests {
         assert_eq!(mock.device_count(), device_types.len());
         
         // Verify all device types are present
-        for i in 0..device_types.len() {
+        for (i, device_type) in device_types.iter().enumerate() {
             let device = mock.get_device(i).unwrap();
-            assert_eq!(device.device_type, device_types[i]);
+            assert_eq!(device.device_type, *device_type);
         }
     }
 

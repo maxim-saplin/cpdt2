@@ -3,15 +3,20 @@
 //! These tests verify that our test utilities and infrastructure work correctly
 //! and can be relied upon for testing the main functionality.
 
+#[cfg(feature = "test-utils")]
 use disk_speed_test::test_utils::{
     TestEnvironment, TestEnvironmentBuilder, TestDataManager,
     test_data::{TestDataGenerator, TestDataPattern, TestDataVerifier},
     cleanup::{CleanupGuard, utils as cleanup_utils}
 };
+#[cfg(feature = "test-utils")]
 use std::time::Duration;
+#[cfg(feature = "test-utils")]
 use std::fs;
+#[cfg(feature = "test-utils")]
 use tempfile::TempDir;
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_data_manager_lifecycle() {
     let mut manager = TestDataManager::new().unwrap();
@@ -36,6 +41,7 @@ fn test_data_manager_lifecycle() {
     assert_eq!(manager.test_files().len(), 1);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_data_generator_patterns() {
     let temp_dir = TempDir::new().unwrap();
@@ -65,6 +71,7 @@ fn test_data_generator_patterns() {
     assert!(verifier.verify_file(&seq_file).unwrap());
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_seeded_random_reproducibility() {
     let temp_dir = TempDir::new().unwrap();
@@ -93,6 +100,7 @@ fn test_seeded_random_reproducibility() {
     assert_ne!(data1, data3);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_environment_builder() {
     let env = TestEnvironmentBuilder::new()
@@ -116,6 +124,7 @@ fn test_environment_builder() {
     assert_eq!(benchmark_config.file_size_mb, 1);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_environment_requirements_check() {
     let env = TestEnvironmentBuilder::new()
@@ -135,6 +144,7 @@ fn test_environment_requirements_check() {
     assert!(env.check_requirements().is_ok());
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_cleanup_guard() {
     let temp_dir = TempDir::new().unwrap();
@@ -153,6 +163,7 @@ fn test_cleanup_guard() {
     assert!(!test_file.exists());
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_cleanup_pattern_matching() {
     let temp_dir = TempDir::new().unwrap();
@@ -173,11 +184,12 @@ fn test_cleanup_pattern_matching() {
     assert!(temp_dir.path().join("other_file.txt").exists()); // Should remain
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_environment_result_recording() {
     use disk_speed_test::core::stats::TestResult;
     
-    let env = TestEnvironment::default().unwrap();
+    let env = TestEnvironment::with_defaults().unwrap();
     
     let test_result = TestResult {
         min_speed_mbps: 10.0,
@@ -197,9 +209,10 @@ fn test_environment_result_recording() {
     assert_eq!(results[0].1.avg_speed_mbps, 50.0);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_environment_reset() {
-    let mut env = TestEnvironment::default().unwrap();
+    let mut env = TestEnvironment::with_defaults().unwrap();
     
     // Create some test files
     let _file1 = env.data_manager().create_test_file("test1.dat", 1024).unwrap();
@@ -214,6 +227,7 @@ fn test_environment_reset() {
     assert_eq!(env.data_manager().test_files().len(), 0);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_timeout_guard() {
     use disk_speed_test::test_utils::test_environment::TimeoutGuard;
@@ -232,6 +246,7 @@ fn test_timeout_guard() {
     assert_eq!(guard.remaining_time(), Duration::ZERO);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_sparse_file_creation() {
     let temp_dir = TempDir::new().unwrap();
@@ -245,6 +260,7 @@ fn test_sparse_file_creation() {
     assert_eq!(fs::metadata(&sparse_file).unwrap().len(), 1024 * 1024);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_pattern_file_creation() {
     let temp_dir = TempDir::new().unwrap();
@@ -264,6 +280,7 @@ fn test_pattern_file_creation() {
     assert_eq!(fs::metadata(&pattern_file).unwrap().len(), 8192);
 }
 
+#[cfg(feature = "test-utils")]
 #[test]
 fn test_environment_skip_logic() {
     let env = TestEnvironmentBuilder::new()

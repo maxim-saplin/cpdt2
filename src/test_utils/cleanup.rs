@@ -300,7 +300,7 @@ mod tests {
         assert!(file_path.exists());
         
         // Don't let TempDir clean up automatically
-        let path = temp_dir.into_path();
+        let path = temp_dir.keep();
         
         {
             let _guard = CleanupGuard::for_directory(&path);
@@ -346,7 +346,6 @@ mod tests {
     #[test]
     fn test_manual_cleanup() {
         let temp_file = NamedTempFile::new().unwrap();
-        let path = temp_file.path().to_path_buf();
         
         // Don't let NamedTempFile clean up automatically
         let (_file, file_path) = temp_file.keep().unwrap();

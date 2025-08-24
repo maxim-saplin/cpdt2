@@ -67,7 +67,7 @@ fn main() {
     if let Ok(git_hash) = env::var("GITHUB_SHA") {
         println!("cargo:rustc-env=GIT_HASH={}", &git_hash[..8]);
     } else if let Ok(output) = std::process::Command::new("git")
-        .args(&["rev-parse", "--short", "HEAD"])
+        .args(["rev-parse", "--short", "HEAD"])
         .output()
     {
         if output.status.success() {

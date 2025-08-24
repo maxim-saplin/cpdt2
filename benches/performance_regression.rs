@@ -8,7 +8,6 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion, Benchmark
 use disk_speed_test::{BenchmarkConfig, run_benchmark};
 use std::path::PathBuf;
 use std::time::Duration;
-use tempfile;
 
 /// Baseline performance thresholds (in MB/s)
 const MIN_MEMORY_COPY_SPEED: f64 = 1000.0;  // 1 GB/s minimum for memory copy
