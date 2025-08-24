@@ -13,14 +13,14 @@
   - Define error types and BenchmarkError enum with proper error handling
   - _Requirements: 4.4, 5.4, 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 3. Create platform abstraction layer foundation
+- [x] 3. Create platform abstraction layer foundation
   - Define PlatformOps trait with required methods for file operations
   - Create StorageDevice struct for device information
   - Implement platform detection and conditional compilation setup
   - Create stub implementations for each platform module
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 4. Implement statistics collection engine
+- [x] 4. Implement statistics collection engine
   - Create statistics collection system that samples performance every 100ms
   - Implement min/max/avg calculation logic for collected samples
   - Create real-time speed calculation from bytes transferred and elapsed time

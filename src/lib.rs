@@ -12,7 +12,7 @@ pub mod platform;
 // Re-export core types for library consumers
 pub use core::{
     BenchmarkConfig, BenchmarkResults, TestResult, ProgressCallback,
-    run_benchmark, BenchmarkError
+    run_benchmark, BenchmarkError, StatisticsCollector, RealTimeStatsTracker
 };
 
 pub use platform::{

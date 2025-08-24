@@ -9,7 +9,7 @@ pub mod tests;
 pub mod stats;
 
 pub use config::BenchmarkConfig;
-pub use stats::{TestResult, StatisticsCollector};
+pub use stats::{TestResult, StatisticsCollector, RealTimeStatsTracker};
 
 /// Results from a complete benchmark run
 #[derive(Debug, Clone, Serialize, Deserialize)]
