@@ -13,6 +13,12 @@ mod args_test;
 #[cfg(test)]
 mod display_test;
 
+#[cfg(test)]
+mod display_comprehensive_test;
+
+#[cfg(test)]
+mod args_comprehensive_test;
+
 use args::{Cli, Commands, OutputFormat, parse_size};
 use device_list::list_devices_command;
 use display::CliProgressCallback;

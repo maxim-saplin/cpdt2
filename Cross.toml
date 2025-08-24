@@ -1,0 +1,93 @@
+# Cross-compilation configuration for disk-speed-test
+# This file configures the cross tool for building on different platforms
+
+[build]
+# Default target directory
+target-dir = "target"
+
+[build.env]
+# Environment variables for all builds
+passthrough = [
+    "BUILD_TIME",
+    "GIT_HASH",
+    "GITHUB_SHA",
+    "GITHUB_RUN_ID",
+]
+
+# Windows targets
+[target.x86_64-pc-windows-gnu]
+image = "ghcr.io/cross-rs/x86_64-pc-windows-gnu:main"
+
+[target.i686-pc-windows-gnu]
+image = "ghcr.io/cross-rs/i686-pc-windows-gnu:main"
+
+# Linux targets
+[target.x86_64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:main"
+
+[target.aarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
+
+[target.aarch64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:main"
+
+[target.armv7-unknown-linux-gnueabihf]
+image = "ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:main"
+
+[target.armv7-unknown-linux-musleabihf]
+image = "ghcr.io/cross-rs/armv7-unknown-linux-musleabihf:main"
+
+# Android targets
+[target.aarch64-linux-android]
+image = "ghcr.io/cross-rs/aarch64-linux-android:main"
+
+[target.armv7-linux-androideabi]
+image = "ghcr.io/cross-rs/armv7-linux-androideabi:main"
+
+[target.i686-linux-android]
+image = "ghcr.io/cross-rs/i686-linux-android:main"
+
+[target.x86_64-linux-android]
+image = "ghcr.io/cross-rs/x86_64-linux-android:main"
+
+# FreeBSD targets
+[target.x86_64-unknown-freebsd]
+image = "ghcr.io/cross-rs/x86_64-unknown-freebsd:main"
+
+# NetBSD targets
+[target.x86_64-unknown-netbsd]
+image = "ghcr.io/cross-rs/x86_64-unknown-netbsd:main"
+
+# Custom build configurations
+[target.x86_64-unknown-linux-musl.env]
+# Static linking for musl builds
+RUSTFLAGS = "-C target-feature=+crt-static"
+
+[target.aarch64-unknown-linux-musl.env]
+# Static linking for musl builds
+RUSTFLAGS = "-C target-feature=+crt-static"
+
+# Android-specific environment
+[target.aarch64-linux-android.env]
+CC = "aarch64-linux-android21-clang"
+CXX = "aarch64-linux-android21-clang++"
+AR = "aarch64-linux-android-ar"
+CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER = "aarch64-linux-android21-clang"
+
+[target.armv7-linux-androideabi.env]
+CC = "armv7a-linux-androideabi21-clang"
+CXX = "armv7a-linux-androideabi21-clang++"
+AR = "arm-linux-androideabi-ar"
+CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER = "armv7a-linux-androideabi21-clang"
+
+[target.i686-linux-android.env]
+CC = "i686-linux-android21-clang"
+CXX = "i686-linux-android21-clang++"
+AR = "i686-linux-android-ar"
+CARGO_TARGET_I686_LINUX_ANDROID_LINKER = "i686-linux-android21-clang"
+
+[target.x86_64-linux-android.env]
+CC = "x86_64-linux-android21-clang"
+CXX = "x86_64-linux-android21-clang++"
+AR = "x86_64-linux-android-ar"
+CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER = "x86_64-linux-android21-clang"

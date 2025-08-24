@@ -12,6 +12,15 @@ pub mod progress;
 #[cfg(test)]
 mod progress_integration_test;
 
+#[cfg(test)]
+mod config_test;
+
+#[cfg(test)]
+mod error_test;
+
+#[cfg(test)]
+mod stats_comprehensive_test;
+
 pub use config::BenchmarkConfig;
 pub use stats::{TestResult, StatisticsCollector, RealTimeStatsTracker};
 pub use progress::{ProgressReporter, NoOpProgressCallback, TestProgressCallback, ProgressEvent};

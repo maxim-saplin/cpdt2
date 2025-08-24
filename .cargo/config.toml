@@ -1,0 +1,29 @@
+# Cargo configuration for disk-speed-test project
+
+[build]
+# Enable all CPU features for better performance in benchmarks
+rustflags = ["-C", "target-cpu=native"]
+
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+# Test configuration
+[env]
+RUST_TEST_THREADS = "1"  # Run tests sequentially to avoid I/O conflicts
+RUST_BACKTRACE = "1"     # Enable backtraces for debugging
+DISK_SPEED_TEST_LOG = "debug"  # Enable debug logging for tests
+
+# Benchmark configuration
+[profile.bench]
+debug = true
+lto = true
+codegen-units = 1
+
+# Test profile with optimizations for performance tests
+[profile.test]
+opt-level = 2
+debug = true
+overflow-checks = true

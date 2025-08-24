@@ -21,6 +21,29 @@ pub mod android;
 #[cfg(target_os = "ios")]
 pub mod ios;
 
+// Mock platform for testing
+#[cfg(test)]
+pub mod mock_platform;
+
+#[cfg(test)]
+mod platform_test;
+
+// Platform-specific test modules
+#[cfg(test)]
+mod windows_test;
+
+#[cfg(test)]
+mod macos_test;
+
+#[cfg(test)]
+mod linux_test;
+
+#[cfg(test)]
+mod error_conditions_test;
+
+#[cfg(test)]
+mod mobile_platforms_test;
+
 /// Errors that can occur in platform-specific operations
 #[derive(Error, Debug)]
 pub enum PlatformError {
@@ -38,6 +61,21 @@ pub enum PlatformError {
     
     #[error("Insufficient permissions: {0}")]
     InsufficientPermissions(String),
+}
+
+impl Clone for PlatformError {
+    fn clone(&self) -> Self {
+        match self {
+            PlatformError::IoError(e) => {
+                // Create a new io::Error with the same kind and message
+                PlatformError::IoError(std::io::Error::new(e.kind(), e.to_string()))
+            }
+            PlatformError::UnsupportedPlatform(s) => PlatformError::UnsupportedPlatform(s.clone()),
+            PlatformError::DeviceEnumerationFailed(s) => PlatformError::DeviceEnumerationFailed(s.clone()),
+            PlatformError::DirectIoNotSupported => PlatformError::DirectIoNotSupported,
+            PlatformError::InsufficientPermissions(s) => PlatformError::InsufficientPermissions(s.clone()),
+        }
+    }
 }
 
 /// Types of storage devices

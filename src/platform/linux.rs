@@ -44,7 +44,7 @@ impl LinuxPlatform {
     }
     
     /// Check if this is a real filesystem we should include
-    fn is_real_filesystem(device: &str, fs_type: &str) -> bool {
+    pub fn is_real_filesystem(device: &str, fs_type: &str) -> bool {
         // Skip virtual filesystems
         let virtual_fs = ["proc", "sysfs", "devfs", "tmpfs", "devpts", "cgroup", "cgroup2", 
                          "pstore", "bpf", "tracefs", "debugfs", "securityfs", "hugetlbfs",
@@ -63,7 +63,7 @@ impl LinuxPlatform {
     }
     
     /// Get device information from /sys/block
-    fn get_device_info(device_path: &str) -> Result<DeviceInfo, PlatformError> {
+    pub fn get_device_info(device_path: &str) -> Result<DeviceInfo, PlatformError> {
         // Extract device name from path like /dev/sda1 -> sda
         let device_name = if let Some(name) = device_path.strip_prefix("/dev/") {
             // Remove partition numbers (e.g., sda1 -> sda, nvme0n1p1 -> nvme0n1)

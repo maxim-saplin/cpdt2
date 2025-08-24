@@ -9,6 +9,9 @@
 pub mod core;
 pub mod platform;
 
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
+
 // Re-export core types for library consumers
 pub use core::{
     BenchmarkConfig, BenchmarkResults, TestResult, ProgressCallback,

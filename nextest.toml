@@ -1,0 +1,62 @@
+# Configuration for cargo-nextest test runner
+
+[profile.default]
+# Run tests with a timeout to prevent hanging
+slow-timeout = { period = "60s", terminate-after = 2 }
+leak-timeout = "100ms"
+
+# Test threads - run sequentially for I/O tests
+test-threads = 1
+
+# Retry configuration for flaky tests
+retries = 2
+
+# Test output configuration
+status-level = "pass"
+final-status-level = "slow"
+
+# Filter configuration
+filter = "not test(should_skip)"
+
+[profile.ci]
+# CI-specific configuration with stricter timeouts
+slow-timeout = { period = "30s", terminate-after = 1 }
+test-threads = 1
+retries = 1
+
+# More verbose output for CI
+status-level = "all"
+final-status-level = "all"
+
+[profile.coverage]
+# Configuration for coverage runs
+test-threads = 1
+retries = 0  # No retries for coverage to avoid double counting
+
+# Include all tests for coverage
+filter = ""
+
+[test-groups]
+# Group I/O intensive tests
+io-tests = { max-threads = 1 }
+
+# Group platform-specific tests  
+platform-tests = { max-threads = 2 }
+
+# Group benchmark tests
+benchmark-tests = { max-threads = 1 }
+
+[[profile.default.overrides]]
+# I/O tests should run sequentially
+filter = "test(benchmark) or test(integration) or test(platform)"
+test-group = "io-tests"
+
+[[profile.default.overrides]]
+# Platform tests can run with limited parallelism
+filter = "test(platform)"
+test-group = "platform-tests"
+
+[[profile.default.overrides]]
+# Benchmark tests should run sequentially
+filter = "test(benchmark) or test(performance)"
+test-group = "benchmark-tests"

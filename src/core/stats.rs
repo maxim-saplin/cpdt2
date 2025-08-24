@@ -186,6 +186,12 @@ impl StatisticsCollector {
         samples[idx]
     }
 
+    /// Public test-only wrapper for percentile calculation
+    #[cfg(test)]
+    pub fn test_percentile_nearest_rank(samples: Vec<f64>, p: f64) -> f64 {
+        Self::percentile_nearest_rank(samples, p)
+    }
+
     /// Finalize collection and return test results
     pub fn finalize(self) -> TestResult {
         if self.samples.is_empty() {

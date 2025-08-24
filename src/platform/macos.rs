@@ -196,7 +196,7 @@ fn create_storage_device_from_path(path: &Path) -> Result<StorageDevice, Platfor
 }
 
 /// Determine the device type based on path and filesystem information
-fn determine_device_type(path: &Path, _statvfs: &libc::statvfs) -> DeviceType {
+pub fn determine_device_type(path: &Path, _statvfs: &libc::statvfs) -> DeviceType {
     let path_str = path.to_string_lossy();
     
     // Check for common patterns to determine device type
