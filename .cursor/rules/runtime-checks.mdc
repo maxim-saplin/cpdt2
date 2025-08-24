@@ -1,0 +1,64 @@
+# Runtime Checks - Quick Guide
+
+USE THIS RUNTIME CHECKS DURIGN THE REVIEW PROCESS! 
+- Test if the tests are running fine
+- Test the app build
+- MOST IMPORTANT CHECK IF THE NEWLY ADDED FEATURES CAN RUN!
+
+## QA Testing
+
+### Essential Commands
+```bash
+# Run all tests
+cargo test
+
+# Run only unit tests (fast)
+cargo test --lib
+
+# Run specific test pattern
+cargo test sequential_write
+
+# Debug failing tests
+RUST_BACKTRACE=1 cargo test test_name -- --nocapture
+```
+
+### Common Patterns
+- `cargo test --lib` - Unit tests only (recommended for development)
+- `cargo test pattern` - Run tests matching pattern
+- `cargo test -- --test-threads=1` - Run sequentially for debugging
+- `cargo test --quiet` - Minimal output
+
+## Running the Application
+
+### Build Commands
+```bash
+# Build debug version
+cargo build
+
+# Build release version (optimized)
+cargo build --release
+
+# Check compilation without building
+cargo check
+```
+
+### Run Commands
+```bash
+# Run debug version
+cargo run
+
+# Run release version
+cargo run --release
+
+# Run with arguments
+cargo run -- --help
+cargo run -- /path/to/test/directory
+
+# Run specific binary (if multiple)
+cargo run --bin disk-speed-test
+```
+
+### Common Patterns
+- `cargo run --release` - Run optimized version for actual benchmarking
+- `cargo run -- --help` - Show CLI help
+- `cargo build && ./target/debug/disk-speed-test` - Build then run directly
