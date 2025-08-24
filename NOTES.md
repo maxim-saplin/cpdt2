@@ -71,6 +71,10 @@ I want to create a cross-platform disk speed test utility. it must be compilable
 			§ At some earlier point there was Docs/Testing.md doc created mentioning to use GH Actions for CI/CD
 			§ The diff was 41 files, Cursor with GPT-5 rejected to run review with Git Diff set as context saying the context is too large
 		○ All done! It works! The ap runs! All 246 tests run and complete! It created that much files and that much scope I can hardly check, need to spend half a day running on different platforms, checking CI/CD > guess if the overhead is functional (all those shell scripts and automation) BUT THE APP SEEM FINE!
+            § Picking a device (from a list) and writing to OS provided app folder works on that device - the requirement put in the original prompt that started the whole experiemt got lost and never implemented > the app requires defining he path where to write - not a big deal, can be fixed, also I could be more clear about how to pick a drive (i.e. interactively inside the CLI) the gap in reqs might be my falult
+            § Curious to test if non-buffered writes and non-cached reads actually work
+            § 35 linter problems remain
+            § After commiting GH Actions scripts they fail - no surprise here, need sorting out
 		
 
 Side Thoughts
@@ -94,6 +98,8 @@ Side Thoughts
 	- LLM agents working coherently on ever going horizon/scope - it's happening, Kiro can work on a series of qued tasks for tens of minutes, maybe could stay on for 1h was it in dev containers and with all CLI commands it issued automatically executed (this time some commands required manual confirmation)
 		○ Part of success in extended work is Kiro's harness > the way it breaks down longer horizon tasks, executing them independently, no need to contain longer context
 	- High level languages turning into assembly? I can barely follow what Rust toolchain is used for e.g. running tests or cross-compiling… Do I need to?
+	- Although my experience is more vibe coding (barely looking into the code) I still don't see how I could guide the agents without knowing what to ask and how stuff works > i.e. I don’t see a non-tech person implementing the app
+    - The risk of losing connecting to code base and being dependent on AI to maintain grows significantly > previosuly LLM based AI assistant often failed to change the verbnosity and nonsense code they created > at this point I am lost in the code base and can't say if it is maintainable or not
 
 Code stats:
 ```
