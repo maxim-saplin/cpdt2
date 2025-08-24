@@ -7,9 +7,14 @@ use serde::{Serialize, Deserialize};
 pub mod config;
 pub mod tests;
 pub mod stats;
+pub mod progress;
+
+#[cfg(test)]
+mod progress_integration_test;
 
 pub use config::BenchmarkConfig;
 pub use stats::{TestResult, StatisticsCollector, RealTimeStatsTracker};
+pub use progress::{ProgressReporter, NoOpProgressCallback, TestProgressCallback, ProgressEvent};
 
 /// Results from a complete benchmark run
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,14 +27,61 @@ pub struct BenchmarkResults {
 }
 
 /// Trait for receiving progress updates during benchmark execution
+/// 
+/// This trait allows consumers to receive real-time updates during benchmark execution,
+/// including when tests start, progress updates with current speed, and completion notifications.
+/// 
+/// # Thread Safety
+/// 
+/// Implementations must be `Send + Sync` as they may be called from different threads
+/// during benchmark execution.
+/// 
+/// # Example
+/// 
+/// ```rust
+/// use disk_speed_test::core::{ProgressCallback, TestResult};
+/// 
+/// struct MyProgressCallback;
+/// 
+/// impl ProgressCallback for MyProgressCallback {
+///     fn on_test_start(&self, test_name: &str) {
+///         println!("Starting test: {}", test_name);
+///     }
+///     
+///     fn on_progress(&self, test_name: &str, current_speed_mbps: f64) {
+///         println!("{}: {:.2} MB/s", test_name, current_speed_mbps);
+///     }
+///     
+///     fn on_test_complete(&self, test_name: &str, result: &TestResult) {
+///         println!("{} completed: avg {:.2} MB/s", test_name, result.avg_speed_mbps);
+///     }
+/// }
+/// ```
 pub trait ProgressCallback: Send + Sync {
     /// Called when a test starts
+    /// 
+    /// # Arguments
+    /// 
+    /// * `test_name` - Name of the test that is starting (e.g., "Sequential Write")
     fn on_test_start(&self, test_name: &str);
     
     /// Called periodically during test execution with current speed
+    /// 
+    /// This method is called approximately every 100ms during test execution
+    /// to provide real-time speed updates.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `test_name` - Name of the currently running test
+    /// * `current_speed_mbps` - Current instantaneous speed in MB/s
     fn on_progress(&self, test_name: &str, current_speed_mbps: f64);
     
     /// Called when a test completes
+    /// 
+    /// # Arguments
+    /// 
+    /// * `test_name` - Name of the test that completed
+    /// * `result` - Final test results including min, max, and average speeds
     fn on_test_complete(&self, test_name: &str, result: &TestResult);
 }
 
