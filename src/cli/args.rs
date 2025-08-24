@@ -4,20 +4,15 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand, ValueEnum};
 
 /// Output format options
-#[derive(Debug, Clone, ValueEnum)]
+#[derive(Debug, Clone, ValueEnum, Default)]
 pub enum OutputFormat {
     /// Display results in a formatted table
+    #[default]
     Table,
     /// Output results as JSON
     Json,
     /// Output results as CSV
     Csv,
-}
-
-impl Default for OutputFormat {
-    fn default() -> Self {
-        OutputFormat::Table
-    }
 }
 
 /// CLI commands

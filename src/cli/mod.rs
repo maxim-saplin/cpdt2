@@ -1,7 +1,7 @@
 //! Command-line interface for the disk speed test utility
 
 use anyhow::Result;
-use disk_speed_test::core::{BenchmarkConfig, run_benchmark};
+use disk_speed_test::{BenchmarkConfig, run_benchmark};
 
 pub mod args;
 pub mod display;
@@ -89,18 +89,19 @@ fn run_benchmark_command(
     // Set cache behavior (note: disable_os_cache is opposite of enable_cache)
     config.disable_os_cache = !enable_cache;
     
-    // Validate configuration
-    config.validate()
-        .map_err(|e| anyhow::anyhow!("Configuration error: {}", e))?;
+    // Validate configuration with enhanced error reporting
+    if let Err(e) = config.validate() {
+        return Err(anyhow::anyhow!("Configuration validation failed: {}", e));
+    }
     
     // Create progress callback
     let progress_callback = CliProgressCallback::new(output_format.clone());
     
-    // Display configuration
-    display_benchmark_config(&config);
-    
-    // Run benchmark
-    println!("\nStarting benchmark tests...\n");
+    // Display configuration (only for table format)
+    if matches!(output_format, OutputFormat::Table) {
+        display_benchmark_config(&config);
+        println!("\nStarting benchmark tests...\n");
+    }
     
     let results = run_benchmark(config, Some(Box::new(progress_callback)))
         .map_err(|e| anyhow::anyhow!("Benchmark failed: {}", e))?;

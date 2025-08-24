@@ -30,7 +30,7 @@ impl ProgressReporter {
     /// A new `ProgressReporter` instance
     pub fn new(callback: Option<Box<dyn ProgressCallback>>) -> Self {
         Self {
-            callback: callback.map(|cb| Arc::from(cb)),
+            callback: callback.map(Arc::from),
             last_progress_time: Arc::new(Mutex::new(Instant::now())),
             progress_interval: Duration::from_millis(100), // Default 100ms interval
         }
@@ -47,7 +47,7 @@ impl ProgressReporter {
         progress_interval: Duration
     ) -> Self {
         Self {
-            callback: callback.map(|cb| Arc::from(cb)),
+            callback: callback.map(Arc::from),
             last_progress_time: Arc::new(Mutex::new(Instant::now())),
             progress_interval,
         }

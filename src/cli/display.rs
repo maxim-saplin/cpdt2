@@ -1,6 +1,6 @@
 //! Display and output formatting for CLI
 
-use disk_speed_test::core::{ProgressCallback, TestResult, BenchmarkResults, BenchmarkError};
+use disk_speed_test::{ProgressCallback, TestResult, BenchmarkResults, BenchmarkError};
 use crate::cli::args::OutputFormat;
 use std::io::{self, Write};
 use std::time::Duration;
@@ -36,6 +36,7 @@ impl CliProgressCallback {
     }
     
     /// Create a new CLI progress callback with verbose output enabled
+    #[allow(dead_code)]
     pub fn new_verbose(output_format: OutputFormat) -> Self {
         Self {
             use_colors: atty::is(atty::Stream::Stdout),
@@ -44,6 +45,8 @@ impl CliProgressCallback {
             showing_progress: Arc::new(Mutex::new(false)),
         }
     }
+    
+
     
     /// Format speed with appropriate precision and units
     pub fn format_speed(&self, speed_mbps: f64) -> String {
@@ -92,6 +95,7 @@ impl CliProgressCallback {
     }
     
     /// Create a progress bar string
+    #[allow(dead_code)]
     pub fn create_progress_bar(&self, width: usize) -> String {
         if !self.use_colors {
             return format!("[{}]", "=".repeat(width.min(20)));
@@ -437,6 +441,7 @@ pub fn display_test_result_enhanced(test_name: &str, result: &TestResult, use_co
 }
 
 /// Display a single test result row (legacy function for compatibility)
+#[allow(dead_code)]
 pub fn display_test_result(test_name: &str, result: &TestResult) {
     display_test_result_enhanced(test_name, result, false);
 }
@@ -538,6 +543,7 @@ pub fn format_results_csv(results: &BenchmarkResults) -> String {
 }
 
 /// Display helpful usage tips and examples
+#[allow(dead_code)]
 pub fn display_usage_tips() {
     let use_colors = atty::is(atty::Stream::Stdout);
     
