@@ -58,5 +58,5 @@ test-group = "platform-tests"
 
 [[profile.default.overrides]]
 # Benchmark tests should run sequentially
-filter = "test(benchmark) or test(performance)"
+filter = "test(benchmark)"
 test-group = "benchmark-tests"

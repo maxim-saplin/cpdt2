@@ -129,17 +129,7 @@ run_integration_tests() {
     log_success "Integration tests passed in ${duration}s"
 }
 
-# Run benchmarks (dry run)
-run_benchmarks() {
-    log_info "Running benchmark dry run..."
-    
-    if ! cargo bench --no-run; then
-        log_error "Benchmark compilation failed"
-        return 1
-    fi
-    
-    log_success "Benchmark dry run passed"
-}
+# (benchmarks removed)
 
 # Generate and check code coverage
 check_coverage() {
@@ -175,18 +165,7 @@ check_coverage() {
     log_success "Coverage ${coverage_percent}% meets threshold ${MIN_COVERAGE}%"
 }
 
-# Run performance regression tests
-run_performance_tests() {
-    log_info "Running performance regression tests..."
-    
-    # Run a subset of performance benchmarks for CI
-    if ! timeout 120 cargo bench --bench performance_regression -- --sample-size 10; then
-        log_error "Performance regression tests failed"
-        return 1
-    fi
-    
-    log_success "Performance regression tests passed"
-}
+# (performance regression tests removed)
 
 # Check for security vulnerabilities
 security_audit() {
@@ -261,9 +240,9 @@ main() {
     run_clippy || failed_checks+=("clippy")
     run_unit_tests || failed_checks+=("unit_tests")
     run_integration_tests || failed_checks+=("integration_tests")
-    run_benchmarks || failed_checks+=("benchmarks")
+    # benchmarks removed
     check_coverage || failed_checks+=("coverage")
-    run_performance_tests || failed_checks+=("performance")
+    # performance tests removed
     security_audit || failed_checks+=("security")
     
     local end_time=$(date +%s)
@@ -300,9 +279,7 @@ case "${1:-all}" in
     "coverage")
         check_coverage
         ;;
-    "performance")
-        run_performance_tests
-        ;;
+    # performance option removed
     "security")
         security_audit
         ;;

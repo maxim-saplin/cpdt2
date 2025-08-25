@@ -1,5 +1,7 @@
 Documenting my experience and reflections on using Kiro AI IDE that implements Spec Driven dev approach. A Sunday experiment that started in the morning and ended in the evening.
 
+## Protocol
+
 	- 2 models (Claude 3.7 and 4, used 4)
 	- Liked the rounded corners UI
 	- Spec Driven > Spec > Deign > Tasks - all in MD
@@ -77,7 +79,7 @@ I want to create a cross-platform disk speed test utility. it must be compilable
             § After commiting GH Actions scripts they fail - no surprise here, need sorting out
 		
 
-Side Thoughts
+## Side Thoughts
 
 	- I don't know Rust, did some course at LinkedIn in 2021 but now I wouldn't be able to do even hello world, have vague recalls of general concepts of the language (borrowing, immutability)
 	- Key value -> they propose a working practice, a discipline > you follow the rules and get it working
@@ -101,7 +103,9 @@ Side Thoughts
 	- Although my experience is more vibe coding (barely looking into the code) I still don't see how I could guide the agents without knowing what to ask and how stuff works > i.e. I don’t see a non-tech person implementing the app
     - The risk of losing connecting to code base and being dependent on AI to maintain grows significantly > previosuly LLM based AI assistant often failed to change the verbnosity and nonsense code they created > at this point I am lost in the code base and can't say if it is maintainable or not
 
-Code stats:
+## Code Stats
+
+cpdt2 code stats:
 ```
 Directory /Users/admin/src/cpdt2
 Total : 72 files, 13226 codes, 1911 comments, 3511 blanks, all 18648 lines
@@ -126,3 +130,7 @@ C#	20	1,690	156	435	2,281
 XML	2	56	0	5	61
 Markdown	1	16	0	8	24
 ```
+
+## Afterthoughts
+- None of the CI works, might be better off not implementing and approaching this task separately
+- Added some performance regressions tests, why? I am not creating an app that can be slow or fast, it measures the speed and reports it, what sort of regressions are we talking about? It either measures the speeds right or not, I don't need to measure performance regressions in the app itself!! Shouidl I measure startup time of if the progtress printed slowly?

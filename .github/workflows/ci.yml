@@ -63,9 +63,6 @@ jobs:
     - name: Run integration tests
       run: cargo test --test '*'
 
-    - name: Run benchmarks (dry run)
-      run: cargo bench --no-run
-
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
@@ -132,26 +129,3 @@ jobs:
         else
           cargo build --target ${{ matrix.job.target }} --release
         fi
-
-  performance-regression:
-    name: Performance Regression Tests
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Run performance benchmarks
-      run: cargo bench --bench performance_regression
-
-    - name: Store benchmark result
-      uses: benchmark-action/github-action-benchmark@v1
-      with:
-        tool: 'cargo'
-        output-file-path: target/criterion/performance_regression/base/estimates.json
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
-        alert-threshold: '200%'
-        comment-on-alert: true
-        fail-on-alert: true

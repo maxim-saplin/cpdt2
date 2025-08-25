@@ -8,7 +8,6 @@ The testing infrastructure provides:
 
 - **Automated CI/CD pipelines** for cross-platform testing
 - **Test data management** with controlled test environments
-- **Performance regression detection** with benchmarking
 - **Code coverage reporting** with quality gates
 - **Test utilities** for creating reproducible test scenarios
 
@@ -25,8 +24,7 @@ src/
 │   ├── test_data.rs           # Test data generation
 │   ├── test_environment.rs    # Test environment management
 │   └── cleanup.rs             # Resource cleanup utilities
-benches/
-└── performance_regression.rs   # Performance regression benchmarks
+benches/                        # (removed) no performance regression benchmarks
 ```
 
 ## Running Tests
@@ -58,10 +56,8 @@ The comprehensive test suite (`./scripts/test-runner.sh`) includes:
 3. **Clippy Linting** - Catches common mistakes and improvements
 4. **Unit Tests** - Tests individual components
 5. **Integration Tests** - Tests component interactions
-6. **Benchmark Compilation** - Verifies benchmark code compiles
-7. **Code Coverage** - Measures test coverage with quality gates
-8. **Performance Tests** - Detects performance regressions
-9. **Security Audit** - Checks for known vulnerabilities
+6. **Code Coverage** - Measures test coverage with quality gates
+7. **Security Audit** - Checks for known vulnerabilities
 
 ### CI/CD Pipeline
 
@@ -75,7 +71,6 @@ The project uses GitHub Actions for automated testing:
 - **Cross-platform testing** on Ubuntu, Windows, and macOS
 - **Multiple Rust versions** (stable and beta)
 - **Cross-compilation** verification
-- **Performance regression** detection
 - **Code coverage** reporting with Codecov integration
 - **Quality gates** with configurable thresholds
 
@@ -146,37 +141,9 @@ use disk_speed_test::test_utils::cleanup::CleanupGuard;
 
 ## Performance Testing
 
-### Regression Benchmarks
+### Performance Testing
 
-Performance regression tests are located in `benches/performance_regression.rs`:
-
-- **Memory Copy Benchmarks** - Baseline memory performance
-- **Sequential Operations** - Sequential read/write performance
-- **Random Operations** - Random access performance
-- **Statistics Overhead** - Performance of statistics collection
-- **Full Regression Suite** - Complete benchmark execution
-
-### Running Performance Tests
-
-```bash
-# Run all benchmarks
-cargo bench
-
-# Run specific benchmark
-cargo bench --bench performance_regression
-
-# Run with specific sample size for CI
-cargo bench --bench performance_regression -- --sample-size 10
-```
-
-### Performance Thresholds
-
-The regression tests include performance thresholds:
-
-- **Memory Copy**: Minimum 1 GB/s
-- **Sequential Write**: Minimum 10 MB/s
-- **Sequential Read**: Minimum 10 MB/s
-- **Random Operations**: Minimum 1 MB/s
+Performance regression benchmarks have been removed from this project. Focus is on correctness, stability, and reporting accuracy rather than enforcing runtime performance thresholds.
 
 ## Code Coverage
 

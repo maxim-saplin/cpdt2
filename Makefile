@@ -1,7 +1,7 @@
 # Makefile for disk-speed-test project
 # Provides convenient commands for development and CI
 
-.PHONY: help test test-unit test-integration test-all coverage benchmark clean format lint audit install-tools ci-setup
+.PHONY: help test test-unit test-integration test-all coverage clean format lint audit install-tools ci-setup
 
 # Default target
 help:
@@ -11,7 +11,7 @@ help:
 	@echo "  test-integration - Run integration tests only"
 	@echo "  test-all       - Run comprehensive test suite"
 	@echo "  coverage       - Generate code coverage report"
-	@echo "  benchmark      - Run performance benchmarks"
+ 
 	@echo "  format         - Format code"
 	@echo "  lint           - Run clippy linting"
 	@echo "  audit          - Run security audit"
@@ -43,14 +43,7 @@ coverage-ci:
 	@echo "Generating code coverage for CI..."
 	cargo llvm-cov --all-features --workspace --lcov --output-path coverage.lcov
 
-# Benchmark targets
-benchmark:
-	@echo "Running benchmarks..."
-	cargo bench
-
-benchmark-regression:
-	@echo "Running performance regression tests..."
-	cargo bench --bench performance_regression
+# Benchmark targets removed
 
 # Code quality targets
 format:
@@ -135,7 +128,6 @@ ci-test:
 	make lint
 	make test-all
 	make coverage-ci
-	make benchmark-regression
 
 # Documentation targets
 doc:
@@ -167,7 +159,6 @@ release-check:
 	make lint
 	make test-all
 	make audit
-	make benchmark
 
 release-build: release-check
 	@echo "Building release binaries..."
