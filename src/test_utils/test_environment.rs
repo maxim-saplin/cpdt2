@@ -1,12 +1,12 @@
 //! Test environment setup and configuration utilities
 
+use super::TestDataManager;
+use crate::core::config::BenchmarkConfig;
+use crate::core::stats::TestResult;
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use anyhow::Result;
-use crate::core::config::BenchmarkConfig;
-use crate::core::stats::TestResult;
-use super::TestDataManager;
 
 /// Test environment configuration
 #[derive(Debug, Clone)]
@@ -100,11 +100,19 @@ impl TestEnvironment {
     /// Create a benchmark configuration suitable for testing
     pub fn create_test_benchmark_config(&self, target_path: Option<PathBuf>) -> BenchmarkConfig {
         let target = target_path.unwrap_or_else(|| self.data_manager.temp_dir_path().to_path_buf());
-        
+
         BenchmarkConfig {
             target_path: target,
-            sequential_block_size: if self.config.use_small_files { 64 * 1024 } else { 4 * 1024 * 1024 },
-            random_block_size: if self.config.use_small_files { 1024 } else { 4 * 1024 },
+            sequential_block_size: if self.config.use_small_files {
+                64 * 1024
+            } else {
+                4 * 1024 * 1024
+            },
+            random_block_size: if self.config.use_small_files {
+                1024
+            } else {
+                4 * 1024
+            },
             test_duration_seconds: if self.config.use_small_files { 1 } else { 5 },
             disable_os_cache: true,
             file_size_mb: if self.config.use_small_files { 1 } else { 100 },
@@ -120,14 +128,20 @@ impl TestEnvironment {
 
     /// Get all recorded test results
     pub fn get_test_results(&self) -> Vec<(String, TestResult)> {
-        self.test_results.lock().unwrap_or_else(|e| e.into_inner()).clone()
+        self.test_results
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Check if test should be skipped based on environment
     pub fn should_skip_test(&self, test_name: &str) -> bool {
         if self.config.skip_privileged_tests {
             // Skip tests that might require elevated permissions
-            matches!(test_name, "direct_io_test" | "device_enumeration_test" | "system_drive_test")
+            matches!(
+                test_name,
+                "direct_io_test" | "device_enumeration_test" | "system_drive_test"
+            )
         } else {
             false
         }
@@ -154,10 +168,10 @@ impl TestEnvironment {
         for file_path in self.data_manager.test_files().to_vec() {
             self.data_manager.cleanup_file(&file_path)?;
         }
-        
+
         // Check requirements again
         self.check_requirements()?;
-        
+
         Ok(())
     }
 }
@@ -181,7 +195,11 @@ impl TimeoutGuard {
     /// Check if operation has timed out
     pub fn check_timeout(&self) -> Result<()> {
         if self.start_time.elapsed() > self.timeout {
-            anyhow::bail!("Operation '{}' timed out after {:?}", self.operation_name, self.timeout);
+            anyhow::bail!(
+                "Operation '{}' timed out after {:?}",
+                self.operation_name,
+                self.timeout
+            );
         }
         Ok(())
     }
@@ -269,7 +287,7 @@ mod tests {
     fn test_benchmark_config_creation() {
         let env = TestEnvironment::with_defaults().unwrap();
         let config = env.create_test_benchmark_config(None);
-        
+
         assert_eq!(config.sequential_block_size, 64 * 1024); // Small file mode
         assert_eq!(config.random_block_size, 1024);
         assert_eq!(config.test_duration_seconds, 1);
@@ -279,10 +297,10 @@ mod tests {
     #[test]
     fn test_timeout_guard() {
         let guard = TimeoutGuard::new("test_op".to_string(), Duration::from_millis(100));
-        
+
         // Should not timeout immediately
         assert!(guard.check_timeout().is_ok());
-        
+
         // Wait and check timeout
         std::thread::sleep(Duration::from_millis(150));
         assert!(guard.check_timeout().is_err());
@@ -291,7 +309,7 @@ mod tests {
     #[test]
     fn test_result_recording() {
         let env = TestEnvironment::with_defaults().unwrap();
-        
+
         let test_result = TestResult {
             min_speed_mbps: 10.0,
             max_speed_mbps: 100.0,
@@ -299,9 +317,9 @@ mod tests {
             test_duration: Duration::from_secs(5),
             sample_count: 100,
         };
-        
+
         env.record_test_result("test_benchmark".to_string(), test_result.clone());
-        
+
         let results = env.get_test_results();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, "test_benchmark");

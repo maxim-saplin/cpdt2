@@ -1,14 +1,14 @@
 //! Display and output formatting for CLI
 
-use disk_speed_test::{ProgressCallback, TestResult, BenchmarkResults, BenchmarkError};
 use crate::cli::args::OutputFormat;
-use std::io::{self, Write};
-use std::time::Duration;
-use std::sync::{Arc, Mutex};
 use anyhow::Result;
+use disk_speed_test::{BenchmarkError, BenchmarkResults, ProgressCallback, TestResult};
+use std::io::{self, Write};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// CLI progress callback implementation
-/// 
+///
 /// This implementation provides real-time progress display for the command line interface,
 /// showing test names and current speeds with proper formatting according to requirements
 /// 10.1, 10.2, 10.3, 10.4, 10.5, and 10.6.
@@ -34,7 +34,7 @@ impl CliProgressCallback {
             showing_progress: Arc::new(Mutex::new(false)),
         }
     }
-    
+
     /// Create a new CLI progress callback with verbose output enabled
     #[allow(dead_code)]
     pub fn new_verbose(output_format: OutputFormat) -> Self {
@@ -45,9 +45,7 @@ impl CliProgressCallback {
             showing_progress: Arc::new(Mutex::new(false)),
         }
     }
-    
 
-    
     /// Format speed with appropriate precision and units
     pub fn format_speed(&self, speed_mbps: f64) -> String {
         if speed_mbps >= 1000.0 {
@@ -58,7 +56,7 @@ impl CliProgressCallback {
             format!("{:.3} MB/s", speed_mbps)
         }
     }
-    
+
     /// Apply color formatting if colors are enabled
     pub fn colorize(&self, text: &str, color_code: &str) -> String {
         if self.use_colors {
@@ -67,7 +65,7 @@ impl CliProgressCallback {
             text.to_string()
         }
     }
-    
+
     /// Clear the current line (for progress updates)
     fn clear_line(&self) {
         if let Ok(mut showing) = self.showing_progress.lock() {
@@ -81,7 +79,7 @@ impl CliProgressCallback {
             }
         }
     }
-    
+
     /// Format duration in a human-readable way
     pub fn format_duration(&self, duration: Duration) -> String {
         let total_secs = duration.as_secs();
@@ -93,14 +91,14 @@ impl CliProgressCallback {
             format!("{:.1}s", duration.as_secs_f64())
         }
     }
-    
+
     /// Create a progress bar string
     #[allow(dead_code)]
     pub fn create_progress_bar(&self, width: usize) -> String {
         if !self.use_colors {
             return format!("[{}]", "=".repeat(width.min(20)));
         }
-        
+
         let filled = "█".repeat(width.min(20));
         let empty = "░".repeat(20_usize.saturating_sub(width));
         format!("[{}{}]", filled, empty)
@@ -117,17 +115,21 @@ impl ProgressCallback for CliProgressCallback {
     fn on_test_start(&self, test_name: &str) {
         // Requirements 10.1, 10.2, 10.3, 10.4, 10.5: Display test name when starting
         let colored_name = self.colorize(test_name, "1;36"); // Bright cyan
-        
+
         // Only show detailed start message for table format
         match self.output_format {
             OutputFormat::Table => {
-                println!("\n{} Starting {}...", 
-                         self.colorize("▶", "1;32"), // Green arrow
-                         colored_name);
-                
+                println!(
+                    "\n{} Starting {}...",
+                    self.colorize("▶", "1;32"), // Green arrow
+                    colored_name
+                );
+
                 if self.verbose {
-                    println!("  {} Initializing test parameters and creating test files...", 
-                             self.colorize("ℹ", "1;34")); // Blue info
+                    println!(
+                        "  {} Initializing test parameters and creating test files...",
+                        self.colorize("ℹ", "1;34")
+                    ); // Blue info
                 }
             }
             OutputFormat::Json | OutputFormat::Csv => {
@@ -137,36 +139,39 @@ impl ProgressCallback for CliProgressCallback {
                 }
             }
         }
-        
+
         // Ensure output is flushed
         io::stdout().flush().unwrap_or(());
     }
-    
+
     fn on_progress(&self, test_name: &str, current_speed_mbps: f64) {
         // Requirements 10.1, 10.2, 10.3, 10.4, 10.5: Show current test name and speed
-        
+
         // Only show progress for table format to avoid interfering with structured output
         match self.output_format {
             OutputFormat::Table => {
                 self.clear_line();
-                
+
                 let colored_name = self.colorize(test_name, "1;33"); // Bright yellow
                 let formatted_speed = self.format_speed(current_speed_mbps);
                 let colored_speed = self.colorize(&formatted_speed, "1;32"); // Bright green
-                
+
                 // Create a simple progress indicator
                 let progress_indicator = if self.use_colors {
                     self.colorize("●", "1;32") // Green dot
                 } else {
                     "*".to_string()
                 };
-                
-                print!("  {} {}: {}", progress_indicator, colored_name, colored_speed);
-                
+
+                print!(
+                    "  {} {}: {}",
+                    progress_indicator, colored_name, colored_speed
+                );
+
                 if self.verbose {
                     print!(" {}", self.colorize("(real-time)", "37")); // Light gray
                 }
-                
+
                 if let Ok(mut showing) = self.showing_progress.lock() {
                     *showing = true;
                 }
@@ -178,54 +183,61 @@ impl ProgressCallback for CliProgressCallback {
                 }
             }
         }
-        
+
         // Ensure output is flushed for real-time display
         io::stdout().flush().unwrap_or(());
     }
-    
+
     fn on_test_complete(&self, test_name: &str, result: &TestResult) {
         // Requirement 10.6: Show P5 (low-percentile), Max, and average (bold) speeds when test completes
-        
+
         match self.output_format {
             OutputFormat::Table => {
                 self.clear_line();
-                
+
                 let colored_name = self.colorize(test_name, "1;32"); // Bright green
                 let min_speed = self.format_speed(result.min_speed_mbps);
                 let max_speed = self.format_speed(result.max_speed_mbps);
                 let avg_speed = self.format_speed(result.avg_speed_mbps);
-                
+
                 // Make average speed bold as per requirement
                 let bold_avg = self.colorize(&avg_speed, "1"); // Bold
-                
+
                 let checkmark = if self.use_colors {
                     self.colorize("✓", "1;32") // Green checkmark
                 } else {
                     "✓".to_string()
                 };
-                
+
                 println!("  {} {} complete", checkmark, colored_name);
-                println!("    P5: {} | P95: {} | Avg: {}", 
-                         self.colorize(&min_speed, "37"), // Light gray
-                         self.colorize(&max_speed, "37"), // Light gray  
-                         bold_avg);
-                
+                println!(
+                    "    P5: {} | P95: {} | Avg: {}",
+                    self.colorize(&min_speed, "37"), // Light gray
+                    self.colorize(&max_speed, "37"), // Light gray
+                    bold_avg
+                );
+
                 if self.verbose {
                     let duration_str = self.format_duration(result.test_duration);
-                    println!("    {} Duration: {}, Samples: {}", 
-                             self.colorize("ℹ", "1;34"), // Blue info
-                             self.colorize(&duration_str, "37"),
-                             self.colorize(&result.sample_count.to_string(), "37"));
+                    println!(
+                        "    {} Duration: {}, Samples: {}",
+                        self.colorize("ℹ", "1;34"), // Blue info
+                        self.colorize(&duration_str, "37"),
+                        self.colorize(&result.sample_count.to_string(), "37")
+                    );
                 }
             }
             OutputFormat::Json | OutputFormat::Csv => {
                 // For structured formats, only show completion if verbose and to stderr
                 if self.verbose {
-                    eprintln!("{} complete: avg {:.2} MB/s", test_name, result.avg_speed_mbps);
+                    eprintln!(
+                        "{} complete: avg {:.2} MB/s",
+                        test_name, result.avg_speed_mbps
+                    );
                 }
             }
         }
-        
+
         // Ensure output is flushed
         io::stdout().flush().unwrap_or(());
     }
@@ -253,7 +265,7 @@ pub fn display_results(results: &BenchmarkResults, output_format: &OutputFormat)
 /// Requirement 11.4: Report errors with helpful diagnostic information
 pub fn display_error(error: &BenchmarkError) {
     let use_colors = atty::is(atty::Stream::Stderr);
-    
+
     let colorize = |text: &str, color_code: &str| -> String {
         if use_colors {
             format!("\x1b[{}m{}\x1b[0m", color_code, text)
@@ -261,22 +273,28 @@ pub fn display_error(error: &BenchmarkError) {
             text.to_string()
         }
     };
-    
+
     let error_prefix = colorize("Error:", "1;31"); // Bold red
     let warning_prefix = colorize("Warning:", "1;33"); // Bold yellow
     let info_prefix = colorize("Info:", "1;34"); // Bold blue
-    
+
     match error {
         BenchmarkError::PlatformError(e) => {
             eprintln!("{} Platform-specific operation failed: {}", error_prefix, e);
-            eprintln!("{} This may be due to insufficient permissions or unsupported hardware.", info_prefix);
+            eprintln!(
+                "{} This may be due to insufficient permissions or unsupported hardware.",
+                info_prefix
+            );
             eprintln!("  Try running with administrator/root privileges or on a different device.");
         }
         BenchmarkError::IoError(e) => {
             eprintln!("{} I/O operation failed: {}", error_prefix, e);
             match e.kind() {
                 io::ErrorKind::PermissionDenied => {
-                    eprintln!("{} Permission denied accessing the target path.", info_prefix);
+                    eprintln!(
+                        "{} Permission denied accessing the target path.",
+                        info_prefix
+                    );
                     eprintln!("  Try running with administrator/root privileges or choose a different path.");
                 }
                 io::ErrorKind::NotFound => {
@@ -292,24 +310,46 @@ pub fn display_error(error: &BenchmarkError) {
                     eprintln!("  Check your block sizes and file size parameters.");
                 }
                 _ => {
-                    eprintln!("{} Check disk space, permissions, and path accessibility.", info_prefix);
+                    eprintln!(
+                        "{} Check disk space, permissions, and path accessibility.",
+                        info_prefix
+                    );
                 }
             }
         }
         BenchmarkError::ConfigurationError(msg) => {
             eprintln!("{} Configuration error: {}", error_prefix, msg);
-            eprintln!("{} Check your command line arguments and try again.", info_prefix);
+            eprintln!(
+                "{} Check your command line arguments and try again.",
+                info_prefix
+            );
             eprintln!("  Use --help to see available options and their formats.");
         }
-        BenchmarkError::InsufficientSpace { required, available } => {
+        BenchmarkError::InsufficientSpace {
+            required,
+            available,
+        } => {
             eprintln!("{} Insufficient disk space for test file.", error_prefix);
-            eprintln!("  Required: {:.2} GB", *required as f64 / (1024.0 * 1024.0 * 1024.0));
-            eprintln!("  Available: {:.2} GB", *available as f64 / (1024.0 * 1024.0 * 1024.0));
-            eprintln!("{} Try using a smaller file size with --file-size option.", info_prefix);
+            eprintln!(
+                "  Required: {:.2} GB",
+                *required as f64 / (1024.0 * 1024.0 * 1024.0)
+            );
+            eprintln!(
+                "  Available: {:.2} GB",
+                *available as f64 / (1024.0 * 1024.0 * 1024.0)
+            );
+            eprintln!(
+                "{} Try using a smaller file size with --file-size option.",
+                info_prefix
+            );
             eprintln!("  Example: --file-size 100MB");
         }
         BenchmarkError::PermissionDenied(path) => {
-            eprintln!("{} Permission denied accessing: {}", error_prefix, path.display());
+            eprintln!(
+                "{} Permission denied accessing: {}",
+                error_prefix,
+                path.display()
+            );
             eprintln!("{} Try one of the following:", info_prefix);
             eprintln!("  • Run with administrator/root privileges");
             eprintln!("  • Choose a different target path you have write access to");
@@ -317,7 +357,10 @@ pub fn display_error(error: &BenchmarkError) {
         }
         BenchmarkError::TestInterrupted(msg) => {
             eprintln!("{} Test was interrupted: {}", warning_prefix, msg);
-            eprintln!("{} Partial results may be incomplete or inaccurate.", info_prefix);
+            eprintln!(
+                "{} Partial results may be incomplete or inaccurate.",
+                info_prefix
+            );
             eprintln!("  Try running the test again with stable system conditions.");
         }
     }
@@ -327,7 +370,7 @@ pub fn display_error(error: &BenchmarkError) {
 /// Requirements 11.1, 11.2, 11.3: Clear table showing all test results with P5, Max, and bold average speeds
 fn display_results_table(results: &BenchmarkResults) {
     let use_colors = atty::is(atty::Stream::Stdout);
-    
+
     let colorize = |text: &str, color_code: &str| -> String {
         if use_colors {
             format!("\x1b[{}m{}\x1b[0m", color_code, text)
@@ -335,62 +378,99 @@ fn display_results_table(results: &BenchmarkResults) {
             text.to_string()
         }
     };
-    
+
     // Header with styling
-    println!("\n{}", colorize("╔══════════════════════════════════════════════════════════════════╗", "1;36"));
-    println!("{}", colorize("║                        BENCHMARK RESULTS                        ║", "1;36"));
-    println!("{}", colorize("╚══════════════════════════════════════════════════════════════════╝", "1;36"));
+    println!(
+        "\n{}",
+        colorize(
+            "╔══════════════════════════════════════════════════════════════════╗",
+            "1;36"
+        )
+    );
+    println!(
+        "{}",
+        colorize(
+            "║                        BENCHMARK RESULTS                        ║",
+            "1;36"
+        )
+    );
+    println!(
+        "{}",
+        colorize(
+            "╚══════════════════════════════════════════════════════════════════╝",
+            "1;36"
+        )
+    );
     println!();
-    
+
     // Table header with better formatting
-    println!("{:<20} {:>12} {:>12} {:>12} {:>10} {:>8}", 
-             colorize("Test", "1;37"), // Bold white
-             colorize("P5 (MB/s)", "37"), // Light gray
-             colorize("P95 (MB/s)", "37"), // Light gray
-             colorize("Avg (MB/s)", "1;33"), // Bold yellow for average
-             colorize("Duration", "37"), // Light gray
-             colorize("Samples", "37")); // Light gray
-    
+    println!(
+        "{:<20} {:>12} {:>12} {:>12} {:>10} {:>8}",
+        colorize("Test", "1;37"),       // Bold white
+        colorize("P5 (MB/s)", "37"),    // Light gray
+        colorize("P95 (MB/s)", "37"),   // Light gray
+        colorize("Avg (MB/s)", "1;33"), // Bold yellow for average
+        colorize("Duration", "37"),     // Light gray
+        colorize("Samples", "37")
+    ); // Light gray
+
     let separator = if use_colors {
         colorize(&"─".repeat(80), "37")
     } else {
         "-".repeat(80)
     };
     println!("{}", separator);
-    
+
     // Format each test result with enhanced display
     display_test_result_enhanced("Sequential Write", &results.sequential_write, use_colors);
     display_test_result_enhanced("Sequential Read", &results.sequential_read, use_colors);
     display_test_result_enhanced("Random Write", &results.random_write, use_colors);
     display_test_result_enhanced("Random Read", &results.random_read, use_colors);
     display_test_result_enhanced("Memory Copy", &results.memory_copy, use_colors);
-    
+
     println!();
-    
+
     // Add summary information
-    let avg_sequential = (results.sequential_write.avg_speed_mbps + results.sequential_read.avg_speed_mbps) / 2.0;
-    let avg_random = (results.random_write.avg_speed_mbps + results.random_read.avg_speed_mbps) / 2.0;
-    
+    let avg_sequential =
+        (results.sequential_write.avg_speed_mbps + results.sequential_read.avg_speed_mbps) / 2.0;
+    let avg_random =
+        (results.random_write.avg_speed_mbps + results.random_read.avg_speed_mbps) / 2.0;
+
     println!("{}", colorize("Summary:", "1;36"));
     println!("  Sequential Average: {:.2} MB/s", avg_sequential);
     println!("  Random Average: {:.2} MB/s", avg_random);
-    println!("  Memory Bandwidth: {:.2} MB/s", results.memory_copy.avg_speed_mbps);
-    
+    println!(
+        "  Memory Bandwidth: {:.2} MB/s",
+        results.memory_copy.avg_speed_mbps
+    );
+
     // Performance indicators
     if avg_sequential > 500.0 {
-        println!("  {} Excellent sequential performance (SSD-class)", colorize("✓", "1;32"));
+        println!(
+            "  {} Excellent sequential performance (SSD-class)",
+            colorize("✓", "1;32")
+        );
     } else if avg_sequential > 100.0 {
         println!("  {} Good sequential performance", colorize("✓", "1;33"));
     } else {
-        println!("  {} Consider upgrading storage for better performance", colorize("ℹ", "1;34"));
+        println!(
+            "  {} Consider upgrading storage for better performance",
+            colorize("ℹ", "1;34")
+        );
     }
-    
+
     if avg_random > 50.0 {
-        println!("  {} Excellent random access performance", colorize("✓", "1;32"));
+        println!(
+            "  {} Excellent random access performance",
+            colorize("✓", "1;32")
+        );
     } else if avg_random > 10.0 {
-        println!("  {} Moderate random access performance", colorize("✓", "1;33"));
+        println!(
+            "  {} Moderate random access performance",
+            colorize("✓", "1;33")
+        );
     }
-    
+
     println!();
 }
 
@@ -403,7 +483,7 @@ pub fn display_test_result_enhanced(test_name: &str, result: &TestResult, use_co
             text.to_string()
         }
     };
-    
+
     let format_duration = |duration: Duration| -> String {
         let total_secs = duration.as_secs();
         if total_secs >= 60 {
@@ -414,7 +494,7 @@ pub fn display_test_result_enhanced(test_name: &str, result: &TestResult, use_co
             format!("{:.1}s", duration.as_secs_f64())
         }
     };
-    
+
     // Color code the test name based on performance
     let colored_test_name = if result.avg_speed_mbps > 100.0 {
         colorize(test_name, "1;32") // Green for good performance
@@ -425,19 +505,21 @@ pub fn display_test_result_enhanced(test_name: &str, result: &TestResult, use_co
     } else {
         colorize(test_name, "1;90") // Dark gray for failed tests
     };
-    
+
     // Make average speed bold as per requirement 11.2
     let bold_avg = colorize(&format!("{:>12.2}", result.avg_speed_mbps), "1");
-    
+
     let duration_str = format_duration(result.test_duration);
-    
-    println!("{:<30} {:>12.2} {:>12.2} {} {:>10} {:>8}", 
-             colored_test_name,
-             result.min_speed_mbps,
-             result.max_speed_mbps,
-             bold_avg,
-             duration_str,
-             result.sample_count);
+
+    println!(
+        "{:<30} {:>12.2} {:>12.2} {} {:>10} {:>8}",
+        colored_test_name,
+        result.min_speed_mbps,
+        result.max_speed_mbps,
+        bold_avg,
+        duration_str,
+        result.sample_count
+    );
 }
 
 /// Display a single test result row (legacy function for compatibility)
@@ -450,7 +532,7 @@ pub fn display_test_result(test_name: &str, result: &TestResult) {
 pub fn format_results_json(results: &BenchmarkResults) -> Result<String, serde_json::Error> {
     use serde_json::json;
     use std::time::SystemTime;
-    
+
     // Create enhanced JSON with metadata
     let enhanced_results = json!({
         "timestamp": SystemTime::now()
@@ -501,44 +583,57 @@ pub fn format_results_json(results: &BenchmarkResults) -> Result<String, serde_j
             "memory_bandwidth": results.memory_copy.avg_speed_mbps
         }
     });
-    
+
     serde_json::to_string_pretty(&enhanced_results)
 }
 
 /// Format benchmark results as CSV with enhanced data
 pub fn format_results_csv(results: &BenchmarkResults) -> String {
     let mut csv = String::new();
-    
+
     // Enhanced CSV header with more information (P5 replaces Min)
     csv.push_str("Test,P5 (MB/s),P95 (MB/s),Avg (MB/s),Duration (s),Samples\n");
-    
+
     // Helper function to format a test result as CSV row
     let format_test_csv = |name: &str, result: &TestResult| -> String {
-        format!("{},{:.2},{:.2},{:.2},{:.2},{}\n",
-                name,
-                result.min_speed_mbps,
-                result.max_speed_mbps,
-                result.avg_speed_mbps,
-                result.test_duration.as_secs_f64(),
-                result.sample_count)
+        format!(
+            "{},{:.2},{:.2},{:.2},{:.2},{}\n",
+            name,
+            result.min_speed_mbps,
+            result.max_speed_mbps,
+            result.avg_speed_mbps,
+            result.test_duration.as_secs_f64(),
+            result.sample_count
+        )
     };
-    
+
     // Add each test result
-    csv.push_str(&format_test_csv("Sequential Write", &results.sequential_write));
-    csv.push_str(&format_test_csv("Sequential Read", &results.sequential_read));
+    csv.push_str(&format_test_csv(
+        "Sequential Write",
+        &results.sequential_write,
+    ));
+    csv.push_str(&format_test_csv(
+        "Sequential Read",
+        &results.sequential_read,
+    ));
     csv.push_str(&format_test_csv("Random Write", &results.random_write));
     csv.push_str(&format_test_csv("Random Read", &results.random_read));
     csv.push_str(&format_test_csv("Memory Copy", &results.memory_copy));
-    
+
     // Add summary row
-    let sequential_avg = (results.sequential_write.avg_speed_mbps + results.sequential_read.avg_speed_mbps) / 2.0;
-    let random_avg = (results.random_write.avg_speed_mbps + results.random_read.avg_speed_mbps) / 2.0;
-    
+    let sequential_avg =
+        (results.sequential_write.avg_speed_mbps + results.sequential_read.avg_speed_mbps) / 2.0;
+    let random_avg =
+        (results.random_write.avg_speed_mbps + results.random_read.avg_speed_mbps) / 2.0;
+
     csv.push_str("\n# Summary\n");
     csv.push_str(&format!("Sequential Average,,,{:.2},,\n", sequential_avg));
     csv.push_str(&format!("Random Average,,,{:.2},,\n", random_avg));
-    csv.push_str(&format!("Memory Bandwidth,,,{:.2},,\n", results.memory_copy.avg_speed_mbps));
-    
+    csv.push_str(&format!(
+        "Memory Bandwidth,,,{:.2},,\n",
+        results.memory_copy.avg_speed_mbps
+    ));
+
     csv
 }
 
@@ -546,7 +641,7 @@ pub fn format_results_csv(results: &BenchmarkResults) -> String {
 #[allow(dead_code)]
 pub fn display_usage_tips() {
     let use_colors = atty::is(atty::Stream::Stdout);
-    
+
     let colorize = |text: &str, color_code: &str| -> String {
         if use_colors {
             format!("\x1b[{}m{}\x1b[0m", color_code, text)
@@ -554,7 +649,7 @@ pub fn display_usage_tips() {
             text.to_string()
         }
     };
-    
+
     println!("{}", colorize("Usage Tips:", "1;36"));
     println!();
     println!("{}:", colorize("List available devices", "1;33"));

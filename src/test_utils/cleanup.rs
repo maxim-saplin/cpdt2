@@ -1,13 +1,14 @@
 //! Test cleanup utilities and resource management
 
+use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use anyhow::Result;
 
 /// Global test cleanup registry
-static CLEANUP_REGISTRY: std::sync::OnceLock<Arc<Mutex<CleanupRegistry>>> = std::sync::OnceLock::new();
+static CLEANUP_REGISTRY: std::sync::OnceLock<Arc<Mutex<CleanupRegistry>>> =
+    std::sync::OnceLock::new();
 
 /// Registry for tracking test resources that need cleanup
 pub struct CleanupRegistry {
@@ -29,7 +30,9 @@ impl CleanupRegistry {
 
     /// Get the global cleanup registry
     pub fn global() -> Arc<Mutex<CleanupRegistry>> {
-        CLEANUP_REGISTRY.get_or_init(|| Arc::new(Mutex::new(CleanupRegistry::new()))).clone()
+        CLEANUP_REGISTRY
+            .get_or_init(|| Arc::new(Mutex::new(CleanupRegistry::new())))
+            .clone()
     }
 
     /// Register a temporary file for cleanup
@@ -198,7 +201,10 @@ pub mod utils {
 
     /// Get cleanup statistics
     pub fn cleanup_stats() -> Option<CleanupStats> {
-        CleanupRegistry::global().lock().ok().map(|registry| registry.stats())
+        CleanupRegistry::global()
+            .lock()
+            .ok()
+            .map(|registry| registry.stats())
     }
 
     /// Clean up files matching a pattern in a directory
@@ -213,7 +219,7 @@ pub mod utils {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
-            
+
             if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
                 if file_name.contains(pattern) {
                     if path.is_file() {
@@ -273,16 +279,16 @@ mod tests {
     fn test_cleanup_guard_file() {
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path().to_path_buf();
-        
+
         // File should exist
         assert!(path.exists());
-        
+
         {
             let _guard = CleanupGuard::for_file(&path);
             // File still exists while guard is alive
             assert!(path.exists());
         }
-        
+
         // File should be cleaned up after guard is dropped
         // Note: NamedTempFile also cleans up, so this test is more about the guard mechanism
     }
@@ -291,22 +297,22 @@ mod tests {
     fn test_cleanup_guard_directory() {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
-        
+
         // Create a file in the directory
         let file_path = path.join("test_file.txt");
         fs::write(&file_path, "test content").unwrap();
-        
+
         assert!(path.exists());
         assert!(file_path.exists());
-        
+
         // Don't let TempDir clean up automatically
         let path = temp_dir.keep();
-        
+
         {
             let _guard = CleanupGuard::for_directory(&path);
             assert!(path.exists());
         }
-        
+
         // Directory should be cleaned up
         assert!(!path.exists());
     }
@@ -314,12 +320,12 @@ mod tests {
     #[test]
     fn test_cleanup_registry() {
         let mut registry = CleanupRegistry::new();
-        
+
         let temp_file = NamedTempFile::new().unwrap();
         let file_path = temp_file.path().to_path_buf();
-        
+
         registry.register_temp_file(&file_path);
-        
+
         let stats = registry.stats();
         assert_eq!(stats.temp_files_count, 1);
         assert_eq!(stats.temp_dirs_count, 0);
@@ -328,15 +334,15 @@ mod tests {
     #[test]
     fn test_cleanup_pattern() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Create test files
         fs::write(temp_dir.path().join("test_file_1.tmp"), "content").unwrap();
         fs::write(temp_dir.path().join("test_file_2.tmp"), "content").unwrap();
         fs::write(temp_dir.path().join("other_file.txt"), "content").unwrap();
-        
+
         let cleaned = utils::cleanup_pattern(temp_dir.path(), "test_file").unwrap();
         assert_eq!(cleaned, 2);
-        
+
         // Only the non-matching file should remain
         assert!(!temp_dir.path().join("test_file_1.tmp").exists());
         assert!(!temp_dir.path().join("test_file_2.tmp").exists());
@@ -346,15 +352,15 @@ mod tests {
     #[test]
     fn test_manual_cleanup() {
         let temp_file = NamedTempFile::new().unwrap();
-        
+
         // Don't let NamedTempFile clean up automatically
         let (_file, file_path) = temp_file.keep().unwrap();
-        
+
         assert!(file_path.exists());
-        
+
         let guard = CleanupGuard::for_file(&file_path);
         guard.cleanup().unwrap();
-        
+
         assert!(!file_path.exists());
     }
 }

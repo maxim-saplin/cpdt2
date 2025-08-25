@@ -5,10 +5,10 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    
+
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=TARGET");
-    
+
     // Set platform-specific configuration flags
     match target_os.as_str() {
         "windows" => {
@@ -37,16 +37,19 @@ fn main() {
             println!("cargo:warning=Unsupported target OS: {}", target_os);
         }
     }
-    
+
     // Set architecture-specific flags
     match target_arch.as_str() {
         "x86_64" => println!("cargo:rustc-cfg=arch_x86_64"),
         "aarch64" => println!("cargo:rustc-cfg=arch_aarch64"),
         "arm" => println!("cargo:rustc-cfg=arch_arm"),
         "x86" => println!("cargo:rustc-cfg=arch_x86"),
-        _ => println!("cargo:warning=Unsupported target architecture: {}", target_arch),
+        _ => println!(
+            "cargo:warning=Unsupported target architecture: {}",
+            target_arch
+        ),
     }
-    
+
     // Set desktop vs mobile flags
     match target_os.as_str() {
         "windows" | "macos" | "linux" => {
@@ -57,12 +60,12 @@ fn main() {
         }
         _ => {}
     }
-    
+
     // Print build information
     println!("cargo:rustc-env=BUILD_TARGET={}", target);
     println!("cargo:rustc-env=BUILD_TARGET_OS={}", target_os);
     println!("cargo:rustc-env=BUILD_TARGET_ARCH={}", target_arch);
-    
+
     // Set version information
     if let Ok(git_hash) = env::var("GITHUB_SHA") {
         println!("cargo:rustc-env=GIT_HASH={}", &git_hash[..8]);
@@ -75,11 +78,13 @@ fn main() {
             println!("cargo:rustc-env=GIT_HASH={}", git_hash);
         }
     }
-    
+
     if let Ok(build_time) = env::var("BUILD_TIME") {
         println!("cargo:rustc-env=BUILD_TIME={}", build_time);
     } else {
-        let build_time = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+        let build_time = chrono::Utc::now()
+            .format("%Y-%m-%d %H:%M:%S UTC")
+            .to_string();
         println!("cargo:rustc-env=BUILD_TIME={}", build_time);
     }
 }
@@ -87,7 +92,7 @@ fn main() {
 fn configure_windows_build(target: &str) {
     println!("cargo:rustc-link-lib=kernel32");
     println!("cargo:rustc-link-lib=user32");
-    
+
     if target.contains("msvc") {
         println!("cargo:rustc-cfg=windows_msvc");
         // Link statically for MSVC builds
@@ -104,7 +109,7 @@ fn configure_macos_build(target: &str) {
     println!("cargo:rustc-link-lib=framework=Foundation");
     println!("cargo:rustc-link-lib=framework=CoreFoundation");
     println!("cargo:rustc-link-lib=framework=IOKit");
-    
+
     if target.contains("aarch64") {
         println!("cargo:rustc-cfg=macos_arm64");
     } else if target.contains("x86_64") {
@@ -120,7 +125,7 @@ fn configure_linux_build(target: &str) {
     } else {
         println!("cargo:rustc-cfg=linux_gnu");
     }
-    
+
     if target.contains("aarch64") {
         println!("cargo:rustc-cfg=linux_arm64");
     } else if target.contains("x86_64") {
@@ -131,7 +136,7 @@ fn configure_linux_build(target: &str) {
 fn configure_android_build(target: &str) {
     println!("cargo:rustc-link-lib=log");
     println!("cargo:rustc-link-lib=android");
-    
+
     if target.contains("aarch64") {
         println!("cargo:rustc-cfg=android_arm64");
     } else if target.contains("armv7") {
@@ -146,7 +151,7 @@ fn configure_android_build(target: &str) {
 fn configure_ios_build(target: &str) {
     println!("cargo:rustc-link-lib=framework=Foundation");
     println!("cargo:rustc-link-lib=framework=UIKit");
-    
+
     if target.contains("aarch64") {
         if target.contains("sim") {
             println!("cargo:rustc-cfg=ios_simulator");

@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use super::super::args::{Cli, Commands, OutputFormat, parse_size};
+    use super::super::args::{parse_size, Cli, Commands, OutputFormat};
     use clap::Parser;
     use std::path::PathBuf;
 
@@ -10,7 +10,7 @@ mod tests {
     fn test_list_devices_command() {
         let args = vec!["disk-speed-test", "list-devices"];
         let cli = Cli::try_parse_from(args).unwrap();
-        
+
         match cli.command {
             Commands::ListDevices => {
                 // Success - this is what we expect
@@ -23,7 +23,7 @@ mod tests {
     fn test_benchmark_command_basic() {
         let args = vec!["disk-speed-test", "benchmark", "/tmp"];
         let cli = Cli::try_parse_from(args).unwrap();
-        
+
         match cli.command {
             Commands::Benchmark { target_path, .. } => {
                 assert_eq!(target_path, PathBuf::from("/tmp"));
@@ -35,20 +35,25 @@ mod tests {
     #[test]
     fn test_benchmark_command_with_options() {
         let args = vec![
-            "disk-speed-test", 
-            "benchmark", 
+            "disk-speed-test",
+            "benchmark",
             "/tmp",
-            "--sequential-block-size", "8MB",
-            "--random-block-size", "8KB", 
-            "--duration", "30",
-            "--file-size", "2GB",
+            "--sequential-block-size",
+            "8MB",
+            "--random-block-size",
+            "8KB",
+            "--duration",
+            "30",
+            "--file-size",
+            "2GB",
             "--enable-cache",
-            "--output-format", "json"
+            "--output-format",
+            "json",
         ];
         let cli = Cli::try_parse_from(args).unwrap();
-        
+
         match cli.command {
-            Commands::Benchmark { 
+            Commands::Benchmark {
                 target_path,
                 sequential_block_size,
                 random_block_size,
@@ -73,9 +78,9 @@ mod tests {
     fn test_benchmark_command_defaults() {
         let args = vec!["disk-speed-test", "benchmark", "/tmp"];
         let cli = Cli::try_parse_from(args).unwrap();
-        
+
         match cli.command {
-            Commands::Benchmark { 
+            Commands::Benchmark {
                 sequential_block_size,
                 random_block_size,
                 duration,
@@ -100,7 +105,7 @@ mod tests {
         // Test that help can be generated without panicking
         let result = Cli::try_parse_from(vec!["disk-speed-test", "--help"]);
         assert!(result.is_err()); // Help exits with error code
-        
+
         // The error should contain help text
         let error = result.unwrap_err();
         let help_text = error.to_string();
@@ -113,7 +118,7 @@ mod tests {
     fn test_version_flag() {
         let result = Cli::try_parse_from(vec!["disk-speed-test", "--version"]);
         assert!(result.is_err()); // Version exits with error code
-        
+
         let error = result.unwrap_err();
         let version_text = error.to_string();
         assert!(version_text.contains("0.1.0")); // Should contain version from Cargo.toml
@@ -134,10 +139,11 @@ mod tests {
     #[test]
     fn test_invalid_output_format() {
         let result = Cli::try_parse_from(vec![
-            "disk-speed-test", 
-            "benchmark", 
+            "disk-speed-test",
+            "benchmark",
             "/tmp",
-            "--output-format", "invalid"
+            "--output-format",
+            "invalid",
         ]);
         assert!(result.is_err());
     }
@@ -145,16 +151,22 @@ mod tests {
     #[test]
     fn test_short_flags() {
         let args = vec![
-            "disk-speed-test", 
-            "benchmark", 
+            "disk-speed-test",
+            "benchmark",
             "/tmp",
-            "-d", "15",
-            "-o", "csv"
+            "-d",
+            "15",
+            "-o",
+            "csv",
         ];
         let cli = Cli::try_parse_from(args).unwrap();
-        
+
         match cli.command {
-            Commands::Benchmark { duration, output_format, .. } => {
+            Commands::Benchmark {
+                duration,
+                output_format,
+                ..
+            } => {
                 assert_eq!(duration, Some(15));
                 assert!(matches!(output_format, OutputFormat::Csv));
             }
@@ -169,24 +181,27 @@ mod tests {
         assert_eq!(parse_size("1KB").unwrap(), 1024);
         assert_eq!(parse_size("1MB").unwrap(), 1024 * 1024);
         assert_eq!(parse_size("1GB").unwrap(), 1024 * 1024 * 1024);
-        
+
         // Test different cases
         assert_eq!(parse_size("1kb").unwrap(), 1024);
         assert_eq!(parse_size("1Mb").unwrap(), 1024 * 1024);
         assert_eq!(parse_size("1gB").unwrap(), 1024 * 1024 * 1024);
-        
+
         // Test short units
         assert_eq!(parse_size("1K").unwrap(), 1024);
         assert_eq!(parse_size("1M").unwrap(), 1024 * 1024);
         assert_eq!(parse_size("1G").unwrap(), 1024 * 1024 * 1024);
-        
+
         // Test with spaces
         assert_eq!(parse_size(" 1MB ").unwrap(), 1024 * 1024);
-        
+
         // Test fractional values
         assert_eq!(parse_size("0.5MB").unwrap(), 512 * 1024);
-        assert_eq!(parse_size("1.5GB").unwrap(), (1.5 * 1024.0 * 1024.0 * 1024.0) as usize);
-        
+        assert_eq!(
+            parse_size("1.5GB").unwrap(),
+            (1.5 * 1024.0 * 1024.0 * 1024.0) as usize
+        );
+
         // Test invalid formats
         assert!(parse_size("invalid").is_err());
         assert!(parse_size("1XB").is_err());
@@ -198,13 +213,14 @@ mod tests {
     fn test_output_format_values() {
         // Test that all output format values are accepted
         let formats = vec!["table", "json", "csv"];
-        
+
         for format in formats {
             let args = vec![
-                "disk-speed-test", 
-                "benchmark", 
+                "disk-speed-test",
+                "benchmark",
                 "/tmp",
-                "--output-format", format
+                "--output-format",
+                format,
             ];
             let result = Cli::try_parse_from(args);
             assert!(result.is_ok(), "Failed to parse output format: {}", format);
@@ -224,12 +240,7 @@ mod tests {
         ];
 
         for (flag, value) in test_cases {
-            let args = vec![
-                "disk-speed-test", 
-                "benchmark", 
-                "/tmp",
-                flag, value
-            ];
+            let args = vec!["disk-speed-test", "benchmark", "/tmp", flag, value];
             let result = Cli::try_parse_from(args);
             assert!(result.is_ok(), "Failed to parse {} {}", flag, value);
         }
@@ -239,13 +250,14 @@ mod tests {
     fn test_duration_validation() {
         // Test duration parameter validation
         let valid_durations = vec!["1", "10", "30", "60", "300"];
-        
+
         for duration in valid_durations {
             let args = vec![
-                "disk-speed-test", 
-                "benchmark", 
+                "disk-speed-test",
+                "benchmark",
                 "/tmp",
-                "--duration", duration
+                "--duration",
+                duration,
             ];
             let result = Cli::try_parse_from(args);
             assert!(result.is_ok(), "Failed to parse duration: {}", duration);
@@ -256,20 +268,25 @@ mod tests {
     fn test_all_options_together() {
         // Test that all options can be used together
         let args = vec![
-            "disk-speed-test", 
-            "benchmark", 
+            "disk-speed-test",
+            "benchmark",
             "/tmp/test",
-            "--sequential-block-size", "8MB",
-            "--random-block-size", "8KB", 
-            "--duration", "30",
-            "--file-size", "2GB",
+            "--sequential-block-size",
+            "8MB",
+            "--random-block-size",
+            "8KB",
+            "--duration",
+            "30",
+            "--file-size",
+            "2GB",
             "--enable-cache",
-            "--output-format", "json"
+            "--output-format",
+            "json",
         ];
         let cli = Cli::try_parse_from(args).unwrap();
-        
+
         match cli.command {
-            Commands::Benchmark { 
+            Commands::Benchmark {
                 target_path,
                 sequential_block_size,
                 random_block_size,
@@ -336,26 +353,24 @@ mod tests {
         assert_eq!(parse_size("0").unwrap(), 0);
         assert_eq!(parse_size("1B").unwrap(), 1);
         assert_eq!(parse_size("1023B").unwrap(), 1023);
-        
+
         // Test very large sizes
         assert_eq!(parse_size("1024GB").unwrap(), 1024 * 1024 * 1024 * 1024);
-        
+
         // Test fractional sizes
         assert_eq!(parse_size("0.5KB").unwrap(), 512);
-        assert_eq!(parse_size("2.5MB").unwrap(), (2.5 * 1024.0 * 1024.0) as usize);
+        assert_eq!(
+            parse_size("2.5MB").unwrap(),
+            (2.5 * 1024.0 * 1024.0) as usize
+        );
     }
 
     #[test]
     fn test_invalid_size_formats() {
         // Test various invalid size formats
         let invalid_sizes = vec![
-            "",
-            "abc",
-            "1XB",
-            "1TB", // Not supported
-            "MB1",
-            "1.2.3MB",
-            "-1MB",
+            "", "abc", "1XB", "1TB", // Not supported
+            "MB1", "1.2.3MB", "-1MB",
         ];
 
         for invalid_size in invalid_sizes {
@@ -369,7 +384,7 @@ mod tests {
         // Test that spaces are handled correctly (trimmed at start/end, but not in middle)
         assert_eq!(parse_size(" 1MB ").unwrap(), 1024 * 1024);
         assert_eq!(parse_size("  2GB  ").unwrap(), 2 * 1024 * 1024 * 1024);
-        
+
         // Space in middle should still work since we trim the whole string first
         // but the number parsing will handle it appropriately
         let result = parse_size("1 MB");

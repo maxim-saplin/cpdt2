@@ -1,11 +1,11 @@
 //! Test data generation and management utilities
 
-use std::fs::File;
-use std::io::{Write, Seek, SeekFrom};
-use std::path::Path;
 use anyhow::Result;
-use rand::{RngCore, SeedableRng};
 use rand::rngs::StdRng;
+use rand::{RngCore, SeedableRng};
+use std::fs::File;
+use std::io::{Seek, SeekFrom, Write};
+use std::path::Path;
 
 /// Patterns for test data generation
 #[derive(Debug, Clone)]
@@ -100,7 +100,12 @@ impl TestDataGenerator {
     }
 
     /// Create a file with specific data at specific offsets
-    pub fn create_pattern_file(&mut self, file_path: &Path, total_size: u64, data_chunks: &[(u64, u64)]) -> Result<()> {
+    pub fn create_pattern_file(
+        &mut self,
+        file_path: &Path,
+        total_size: u64,
+        data_chunks: &[(u64, u64)],
+    ) -> Result<()> {
         let mut file = File::create(file_path)?;
         file.set_len(total_size)?;
 
@@ -127,11 +132,11 @@ impl TestDataVerifier {
     /// Verify that file contains expected pattern
     pub fn verify_file(&self, file_path: &Path) -> Result<bool> {
         use std::io::Read;
-        
+
         let mut file = File::open(file_path)?;
         let mut buffer = vec![0u8; 64 * 1024]; // 64KB buffer
         let mut byte_counter = 0u8;
-        
+
         loop {
             let bytes_read = file.read(&mut buffer)?;
             if bytes_read == 0 {
@@ -143,7 +148,11 @@ impl TestDataVerifier {
                     TestDataPattern::Zeros => 0x00,
                     TestDataPattern::Ones => 0xFF,
                     TestDataPattern::Alternating => {
-                        if byte_counter % 2 == 0 { 0xAA } else { 0x55 }
+                        if byte_counter % 2 == 0 {
+                            0xAA
+                        } else {
+                            0x55
+                        }
                     }
                     TestDataPattern::Sequential => byte_counter,
                     TestDataPattern::RandomSeeded(_) | TestDataPattern::Random => {
@@ -173,9 +182,9 @@ mod tests {
     fn test_zeros_pattern() {
         let mut generator = TestDataGenerator::new(TestDataPattern::Zeros);
         let temp_file = NamedTempFile::new().unwrap();
-        
+
         generator.generate_file(temp_file.path(), 1024).unwrap();
-        
+
         let verifier = TestDataVerifier::new(TestDataPattern::Zeros);
         assert!(verifier.verify_file(temp_file.path()).unwrap());
     }
@@ -184,9 +193,9 @@ mod tests {
     fn test_ones_pattern() {
         let mut generator = TestDataGenerator::new(TestDataPattern::Ones);
         let temp_file = NamedTempFile::new().unwrap();
-        
+
         generator.generate_file(temp_file.path(), 1024).unwrap();
-        
+
         let verifier = TestDataVerifier::new(TestDataPattern::Ones);
         assert!(verifier.verify_file(temp_file.path()).unwrap());
     }
@@ -195,9 +204,9 @@ mod tests {
     fn test_sequential_pattern() {
         let mut generator = TestDataGenerator::new(TestDataPattern::Sequential);
         let temp_file = NamedTempFile::new().unwrap();
-        
+
         generator.generate_file(temp_file.path(), 512).unwrap();
-        
+
         let verifier = TestDataVerifier::new(TestDataPattern::Sequential);
         assert!(verifier.verify_file(temp_file.path()).unwrap());
     }
@@ -206,16 +215,16 @@ mod tests {
     fn test_seeded_random_reproducibility() {
         let mut generator1 = TestDataGenerator::new(TestDataPattern::RandomSeeded(12345));
         let mut generator2 = TestDataGenerator::new(TestDataPattern::RandomSeeded(12345));
-        
+
         let temp_file1 = NamedTempFile::new().unwrap();
         let temp_file2 = NamedTempFile::new().unwrap();
-        
+
         generator1.generate_file(temp_file1.path(), 1024).unwrap();
         generator2.generate_file(temp_file2.path(), 1024).unwrap();
-        
+
         let data1 = std::fs::read(temp_file1.path()).unwrap();
         let data2 = std::fs::read(temp_file2.path()).unwrap();
-        
+
         assert_eq!(data1, data2);
     }
 
@@ -223,9 +232,11 @@ mod tests {
     fn test_sparse_file_creation() {
         let generator = TestDataGenerator::new(TestDataPattern::Zeros);
         let temp_file = NamedTempFile::new().unwrap();
-        
-        generator.create_sparse_file(temp_file.path(), 1024 * 1024).unwrap();
-        
+
+        generator
+            .create_sparse_file(temp_file.path(), 1024 * 1024)
+            .unwrap();
+
         let metadata = std::fs::metadata(temp_file.path()).unwrap();
         assert_eq!(metadata.len(), 1024 * 1024);
     }

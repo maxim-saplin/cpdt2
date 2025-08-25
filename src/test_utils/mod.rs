@@ -1,18 +1,20 @@
 //! Test utilities for creating controlled test environments and managing test data
 
+use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tempfile::{TempDir, NamedTempFile};
-use anyhow::Result;
+use tempfile::{NamedTempFile, TempDir};
 
+pub mod cleanup;
 pub mod test_data;
 pub mod test_environment;
-pub mod cleanup;
 
 // Re-export commonly used types
-pub use test_environment::{TestEnvironment, TestEnvironmentBuilder, TestEnvironmentConfig, TimeoutGuard};
-pub use test_data::{TestDataGenerator, TestDataPattern, TestDataVerifier};
 pub use cleanup::{CleanupGuard, CleanupRegistry, CleanupStats};
+pub use test_data::{TestDataGenerator, TestDataPattern, TestDataVerifier};
+pub use test_environment::{
+    TestEnvironment, TestEnvironmentBuilder, TestEnvironmentConfig, TimeoutGuard,
+};
 
 /// Test data manager for handling temporary directories and files
 pub struct TestDataManager {
@@ -38,28 +40,28 @@ impl TestDataManager {
     /// Create a test file with specified size in bytes
     pub fn create_test_file(&mut self, name: &str, size_bytes: u64) -> Result<PathBuf> {
         let file_path = self.temp_dir.path().join(name);
-        
+
         // Create file with specified size
         let file = fs::File::create(&file_path)?;
         file.set_len(size_bytes)?;
-        
+
         self.test_files.push(file_path.clone());
         Ok(file_path)
     }
 
     /// Create a test file with random data
     pub fn create_random_test_file(&mut self, name: &str, size_bytes: u64) -> Result<PathBuf> {
-        use std::io::Write;
         use rand::RngCore;
-        
+        use std::io::Write;
+
         let file_path = self.temp_dir.path().join(name);
         let mut file = fs::File::create(&file_path)?;
-        
+
         // Write random data in chunks to avoid memory issues
         let chunk_size = 1024 * 1024; // 1MB chunks
         let mut rng = rand::thread_rng();
         let mut remaining = size_bytes;
-        
+
         while remaining > 0 {
             let current_chunk_size = std::cmp::min(chunk_size, remaining);
             let mut chunk = vec![0u8; current_chunk_size as usize];
@@ -67,7 +69,7 @@ impl TestDataManager {
             file.write_all(&chunk)?;
             remaining -= current_chunk_size;
         }
-        
+
         file.sync_all()?;
         self.test_files.push(file_path.clone());
         Ok(file_path)
@@ -128,7 +130,7 @@ mod tests {
     fn test_file_creation() {
         let mut manager = TestDataManager::new().unwrap();
         let file_path = manager.create_test_file("test.dat", 1024).unwrap();
-        
+
         assert!(file_path.exists());
         assert_eq!(fs::metadata(&file_path).unwrap().len(), 1024);
     }
@@ -137,7 +139,7 @@ mod tests {
     fn test_random_file_creation() {
         let mut manager = TestDataManager::new().unwrap();
         let file_path = manager.create_random_test_file("random.dat", 2048).unwrap();
-        
+
         assert!(file_path.exists());
         assert_eq!(fs::metadata(&file_path).unwrap().len(), 2048);
     }
@@ -146,7 +148,7 @@ mod tests {
     fn test_cleanup() {
         let mut manager = TestDataManager::new().unwrap();
         let file_path = manager.create_test_file("cleanup_test.dat", 512).unwrap();
-        
+
         assert!(file_path.exists());
         manager.cleanup_file(&file_path).unwrap();
         assert!(!file_path.exists());

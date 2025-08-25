@@ -1,10 +1,10 @@
 //! Mock platform implementation for testing platform abstraction layer
 
-use std::path::{Path, PathBuf};
-use std::fs::File;
-use std::sync::{Arc, Mutex};
+use crate::platform::{DeviceType, PlatformError, PlatformOps, StorageDevice};
 use std::collections::HashMap;
-use crate::platform::{PlatformOps, StorageDevice, DeviceType, PlatformError};
+use std::fs::File;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// Mock platform implementation for testing
 pub struct MockPlatform {
@@ -54,12 +54,12 @@ impl MockPlatform {
             StorageDevice {
                 name: "USB Drive".to_string(),
                 mount_point: PathBuf::from("/media/usb"),
-                total_space: 32 * 1024 * 1024 * 1024, // 32GB
+                total_space: 32 * 1024 * 1024 * 1024,     // 32GB
                 available_space: 16 * 1024 * 1024 * 1024, // 16GB
                 device_type: DeviceType::Removable,
             },
         ];
-        
+
         Self {
             devices: Arc::new(Mutex::new(devices)),
             app_data_dir: Arc::new(Mutex::new(Some(PathBuf::from("/tmp/app_data")))),
@@ -68,59 +68,59 @@ impl MockPlatform {
             simulated_error: Arc::new(Mutex::new(None)),
         }
     }
-    
+
     /// Add a device to the mock platform
     pub fn add_device(&self, device: StorageDevice) {
         self.devices.lock().unwrap().push(device);
     }
-    
+
     /// Remove all devices from the mock platform
     pub fn clear_devices(&self) {
         self.devices.lock().unwrap().clear();
     }
-    
+
     /// Set the app data directory
     pub fn set_app_data_dir(&self, path: Option<PathBuf>) {
         *self.app_data_dir.lock().unwrap() = path;
     }
-    
+
     /// Set the result for a specific file operation
     pub fn set_file_operation_result(&self, path: PathBuf, result: MockFileResult) {
         self.file_operations.lock().unwrap().insert(path, result);
     }
-    
+
     /// Enable error simulation
     pub fn simulate_error(&self, error: PlatformError) {
         *self.simulate_errors.lock().unwrap() = true;
         *self.simulated_error.lock().unwrap() = Some(error);
     }
-    
+
     /// Disable error simulation
     pub fn disable_error_simulation(&self) {
         *self.simulate_errors.lock().unwrap() = false;
         *self.simulated_error.lock().unwrap() = None;
     }
-    
+
     /// Check if errors are being simulated
     pub fn is_simulating_errors(&self) -> bool {
         *self.simulate_errors.lock().unwrap()
     }
-    
+
     /// Get the current simulated error
     pub fn get_simulated_error(&self) -> Option<PlatformError> {
         self.simulated_error.lock().unwrap().clone()
     }
-    
+
     /// Get the number of devices
     pub fn device_count(&self) -> usize {
         self.devices.lock().unwrap().len()
     }
-    
+
     /// Get a specific device by index
     pub fn get_device(&self, index: usize) -> Option<StorageDevice> {
         self.devices.lock().unwrap().get(index).cloned()
     }
-    
+
     /// Update device available space (simulate space changes)
     pub fn update_device_space(&self, index: usize, available_space: u64) {
         if let Some(device) = self.devices.lock().unwrap().get_mut(index) {
@@ -135,22 +135,22 @@ impl PlatformOps for MockPlatform {
         let mock = MockPlatform::new();
         mock.list_storage_devices_instance()
     }
-    
+
     fn get_app_data_dir() -> Result<PathBuf, PlatformError> {
         let mock = MockPlatform::new();
         mock.get_app_data_dir_instance()
     }
-    
+
     fn create_direct_io_file(path: &Path, _size: u64) -> Result<File, PlatformError> {
         let mock = MockPlatform::new();
         mock.create_direct_io_file_instance(path, _size)
     }
-    
+
     fn open_direct_io_file(path: &Path, _write: bool) -> Result<File, PlatformError> {
         let mock = MockPlatform::new();
         mock.open_direct_io_file_instance(path, _write)
     }
-    
+
     fn sync_file_system(_path: &Path) -> Result<(), PlatformError> {
         let mock = MockPlatform::new();
         mock.sync_file_system_instance(_path)
@@ -165,10 +165,10 @@ impl MockPlatform {
                 return Err(error);
             }
         }
-        
+
         Ok(self.devices.lock().unwrap().clone())
     }
-    
+
     /// Instance method for getting app data directory
     pub fn get_app_data_dir_instance(&self) -> Result<PathBuf, PlatformError> {
         if *self.simulate_errors.lock().unwrap() {
@@ -176,21 +176,27 @@ impl MockPlatform {
                 return Err(error);
             }
         }
-        
+
         match self.app_data_dir.lock().unwrap().clone() {
             Some(path) => Ok(path),
-            None => Err(PlatformError::UnsupportedPlatform("No app data dir configured".to_string())),
+            None => Err(PlatformError::UnsupportedPlatform(
+                "No app data dir configured".to_string(),
+            )),
         }
     }
-    
+
     /// Instance method for creating direct I/O file
-    pub fn create_direct_io_file_instance(&self, path: &Path, _size: u64) -> Result<File, PlatformError> {
+    pub fn create_direct_io_file_instance(
+        &self,
+        path: &Path,
+        _size: u64,
+    ) -> Result<File, PlatformError> {
         if *self.simulate_errors.lock().unwrap() {
             if let Some(error) = self.simulated_error.lock().unwrap().clone() {
                 return Err(error);
             }
         }
-        
+
         // Check for specific file operation results
         if let Some(result) = self.file_operations.lock().unwrap().get(path) {
             match result {
@@ -205,15 +211,19 @@ impl MockPlatform {
             std::fs::File::create(path).map_err(PlatformError::IoError)
         }
     }
-    
+
     /// Instance method for opening direct I/O file
-    pub fn open_direct_io_file_instance(&self, path: &Path, write: bool) -> Result<File, PlatformError> {
+    pub fn open_direct_io_file_instance(
+        &self,
+        path: &Path,
+        write: bool,
+    ) -> Result<File, PlatformError> {
         if *self.simulate_errors.lock().unwrap() {
             if let Some(error) = self.simulated_error.lock().unwrap().clone() {
                 return Err(error);
             }
         }
-        
+
         // Check for specific file operation results
         if let Some(result) = self.file_operations.lock().unwrap().get(path) {
             match result {
@@ -241,7 +251,7 @@ impl MockPlatform {
             }
         }
     }
-    
+
     /// Instance method for syncing file system
     pub fn sync_file_system_instance(&self, _path: &Path) -> Result<(), PlatformError> {
         if *self.simulate_errors.lock().unwrap() {
@@ -249,7 +259,7 @@ impl MockPlatform {
                 return Err(error);
             }
         }
-        
+
         // Mock implementation - always succeeds unless error is simulated
         Ok(())
     }
@@ -269,12 +279,12 @@ mod tests {
     #[test]
     fn test_mock_platform_device_management() {
         let mock = MockPlatform::new();
-        
+
         // Test getting devices
         let device = mock.get_device(0).unwrap();
         assert_eq!(device.name, "System Drive");
         assert_eq!(device.device_type, DeviceType::SolidState);
-        
+
         // Test adding device
         let new_device = StorageDevice {
             name: "Test Drive".to_string(),
@@ -285,11 +295,11 @@ mod tests {
         };
         mock.add_device(new_device.clone());
         assert_eq!(mock.device_count(), 4);
-        
+
         let added_device = mock.get_device(3).unwrap();
         assert_eq!(added_device.name, "Test Drive");
         assert_eq!(added_device.device_type, DeviceType::RamDisk);
-        
+
         // Test clearing devices
         mock.clear_devices();
         assert_eq!(mock.device_count(), 0);
@@ -298,17 +308,17 @@ mod tests {
     #[test]
     fn test_mock_platform_app_data_dir() {
         let mock = MockPlatform::new();
-        
+
         // Test default app data dir
         let app_dir = mock.get_app_data_dir_instance().unwrap();
         assert_eq!(app_dir, PathBuf::from("/tmp/app_data"));
-        
+
         // Test setting custom app data dir
         let custom_dir = PathBuf::from("/custom/app/data");
         mock.set_app_data_dir(Some(custom_dir.clone()));
         let result = mock.get_app_data_dir_instance().unwrap();
         assert_eq!(result, custom_dir);
-        
+
         // Test setting None
         mock.set_app_data_dir(None);
         let result = mock.get_app_data_dir_instance();
@@ -318,19 +328,19 @@ mod tests {
     #[test]
     fn test_mock_platform_error_simulation() {
         let mock = MockPlatform::new();
-        
+
         // Test normal operation
         let devices = mock.list_storage_devices_instance().unwrap();
         assert_eq!(devices.len(), 3);
-        
+
         // Test error simulation
         let error = PlatformError::DeviceEnumerationFailed("Test error".to_string());
         mock.simulate_error(error.clone());
-        
+
         assert!(mock.is_simulating_errors());
         let result = mock.list_storage_devices_instance();
         assert!(result.is_err());
-        
+
         // Test disabling error simulation
         mock.disable_error_simulation();
         assert!(!mock.is_simulating_errors());
@@ -342,13 +352,13 @@ mod tests {
     fn test_mock_platform_file_operations() {
         let mock = MockPlatform::new();
         let test_path = PathBuf::from("/test/file.tmp");
-        
+
         // Test setting file operation result
         mock.set_file_operation_result(
             test_path.clone(),
-            MockFileResult::Error(PlatformError::DirectIoNotSupported)
+            MockFileResult::Error(PlatformError::DirectIoNotSupported),
         );
-        
+
         let result = mock.create_direct_io_file_instance(&test_path, 1024);
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -362,15 +372,15 @@ mod tests {
     #[test]
     fn test_mock_platform_device_space_updates() {
         let mock = MockPlatform::new();
-        
+
         // Get initial device
         let device = mock.get_device(0).unwrap();
         let initial_space = device.available_space;
-        
+
         // Update space
         let new_space = initial_space / 2;
         mock.update_device_space(0, new_space);
-        
+
         // Verify update
         let updated_device = mock.get_device(0).unwrap();
         assert_eq!(updated_device.available_space, new_space);
@@ -381,10 +391,10 @@ mod tests {
         // Test that static methods work (they create their own instances)
         let devices = MockPlatform::list_storage_devices().unwrap();
         assert_eq!(devices.len(), 3);
-        
+
         let app_dir = MockPlatform::get_app_data_dir().unwrap();
         assert_eq!(app_dir, PathBuf::from("/tmp/app_data"));
-        
+
         let sync_result = MockPlatform::sync_file_system(&PathBuf::from("/test"));
         assert!(sync_result.is_ok());
     }
@@ -393,7 +403,7 @@ mod tests {
     fn test_mock_platform_various_device_types() {
         let mock = MockPlatform::new();
         mock.clear_devices();
-        
+
         // Add devices of different types
         let device_types = [
             DeviceType::HardDisk,
@@ -404,7 +414,7 @@ mod tests {
             DeviceType::OpticalDisk,
             DeviceType::Unknown,
         ];
-        
+
         for (i, device_type) in device_types.iter().enumerate() {
             let device = StorageDevice {
                 name: format!("Device {}", i),
@@ -415,9 +425,9 @@ mod tests {
             };
             mock.add_device(device);
         }
-        
+
         assert_eq!(mock.device_count(), device_types.len());
-        
+
         // Verify all device types are present
         for (i, device_type) in device_types.iter().enumerate() {
             let device = mock.get_device(i).unwrap();
@@ -428,14 +438,14 @@ mod tests {
     #[test]
     fn test_mock_platform_edge_cases() {
         let mock = MockPlatform::new();
-        
+
         // Test getting non-existent device
         let result = mock.get_device(999);
         assert!(result.is_none());
-        
+
         // Test updating non-existent device
         mock.update_device_space(999, 1024); // Should not panic
-        
+
         // Test with empty device list
         mock.clear_devices();
         let devices = mock.list_storage_devices_instance().unwrap();
@@ -444,12 +454,12 @@ mod tests {
 
     #[test]
     fn test_mock_platform_concurrent_access() {
-        use std::thread;
         use std::sync::Arc;
-        
+        use std::thread;
+
         let mock = Arc::new(MockPlatform::new());
         let mut handles = vec![];
-        
+
         // Test concurrent device access
         for i in 0..5 {
             let mock_clone = mock.clone();
@@ -465,12 +475,12 @@ mod tests {
             });
             handles.push(handle);
         }
-        
+
         // Wait for all threads to complete
         for handle in handles {
             handle.join().unwrap();
         }
-        
+
         // Should have original 3 devices + 5 concurrent devices
         assert_eq!(mock.device_count(), 8);
     }

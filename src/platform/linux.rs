@@ -1,12 +1,12 @@
 //! Linux-specific platform operations
 
-use std::path::{Path, PathBuf};
-use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Read, Write, Seek, SeekFrom};
-use std::os::unix::fs::OpenOptionsExt;
+use super::{DeviceType, PlatformError, PlatformOps, StorageDevice};
+use libc::{fsync, sync, O_DIRECT, O_SYNC};
 use std::collections::HashMap;
-use libc::{O_DIRECT, O_SYNC, fsync, sync};
-use super::{PlatformOps, StorageDevice, DeviceType, PlatformError};
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
+use std::os::unix::fs::OpenOptionsExt;
+use std::path::{Path, PathBuf};
 
 /// Linux platform implementation
 pub struct LinuxPlatform;
@@ -14,21 +14,27 @@ pub struct LinuxPlatform;
 impl LinuxPlatform {
     /// Parse /proc/mounts to get mounted filesystems
     fn parse_proc_mounts() -> Result<Vec<MountInfo>, PlatformError> {
-        let file = File::open("/proc/mounts")
-            .map_err(|e| PlatformError::DeviceEnumerationFailed(format!("Failed to open /proc/mounts: {}", e)))?;
-        
+        let file = File::open("/proc/mounts").map_err(|e| {
+            PlatformError::DeviceEnumerationFailed(format!("Failed to open /proc/mounts: {}", e))
+        })?;
+
         let reader = BufReader::new(file);
         let mut mounts = Vec::new();
-        
+
         for line in reader.lines() {
-            let line = line.map_err(|e| PlatformError::DeviceEnumerationFailed(format!("Failed to read /proc/mounts: {}", e)))?;
+            let line = line.map_err(|e| {
+                PlatformError::DeviceEnumerationFailed(format!(
+                    "Failed to read /proc/mounts: {}",
+                    e
+                ))
+            })?;
             let parts: Vec<&str> = line.split_whitespace().collect();
-            
+
             if parts.len() >= 4 {
                 let device = parts[0];
                 let mount_point = parts[1];
                 let fs_type = parts[2];
-                
+
                 // Skip virtual filesystems and special mounts
                 if Self::is_real_filesystem(device, fs_type) {
                     mounts.push(MountInfo {
@@ -39,29 +45,48 @@ impl LinuxPlatform {
                 }
             }
         }
-        
+
         Ok(mounts)
     }
-    
+
     /// Check if this is a real filesystem we should include
     pub fn is_real_filesystem(device: &str, fs_type: &str) -> bool {
         // Skip virtual filesystems
-        let virtual_fs = ["proc", "sysfs", "devfs", "tmpfs", "devpts", "cgroup", "cgroup2", 
-                         "pstore", "bpf", "tracefs", "debugfs", "securityfs", "hugetlbfs",
-                         "mqueue", "configfs", "fusectl", "selinuxfs"];
-        
+        let virtual_fs = [
+            "proc",
+            "sysfs",
+            "devfs",
+            "tmpfs",
+            "devpts",
+            "cgroup",
+            "cgroup2",
+            "pstore",
+            "bpf",
+            "tracefs",
+            "debugfs",
+            "securityfs",
+            "hugetlbfs",
+            "mqueue",
+            "configfs",
+            "fusectl",
+            "selinuxfs",
+        ];
+
         if virtual_fs.contains(&fs_type) {
             return false;
         }
-        
+
         // Skip devices that don't look like real block devices
-        if device.starts_with("/proc") || device.starts_with("/sys") || device.starts_with("/dev/pts") {
+        if device.starts_with("/proc")
+            || device.starts_with("/sys")
+            || device.starts_with("/dev/pts")
+        {
             return false;
         }
-        
+
         true
     }
-    
+
     /// Get device information from /sys/block
     pub fn get_device_info(device_path: &str) -> Result<DeviceInfo, PlatformError> {
         // Extract device name from path like /dev/sda1 -> sda
@@ -84,15 +109,15 @@ impl LinuxPlatform {
                 rotational: None,
             });
         };
-        
+
         let sys_block_path = format!("/sys/block/{}", device_name);
-        
+
         // Check if device is rotational (HDD vs SSD)
         let rotational = Self::read_sys_file(&format!("{}/queue/rotational", sys_block_path))
             .ok()
             .and_then(|s| s.trim().parse::<u8>().ok())
             .map(|r| r != 0);
-        
+
         // Determine device type
         let device_type = if device_path.starts_with("/dev/loop") {
             DeviceType::Unknown
@@ -105,13 +130,13 @@ impl LinuxPlatform {
         } else {
             DeviceType::Unknown
         };
-        
+
         Ok(DeviceInfo {
             device_type,
             rotational,
         })
     }
-    
+
     /// Check if device is removable
     fn is_removable_device(sys_block_path: &str) -> bool {
         Self::read_sys_file(&format!("{}/removable", sys_block_path))
@@ -120,47 +145,45 @@ impl LinuxPlatform {
             .map(|r| r != 0)
             .unwrap_or(false)
     }
-    
+
     /// Read a file from /sys
     fn read_sys_file(path: &str) -> Result<String, std::io::Error> {
         std::fs::read_to_string(path)
     }
-    
+
     /// Get filesystem statistics using statvfs
     fn get_filesystem_stats(path: &Path) -> Result<FilesystemStats, PlatformError> {
         use std::ffi::CString;
         use std::mem::MaybeUninit;
-        
-        let path_cstr = CString::new(path.to_string_lossy().as_bytes())
-            .map_err(|e| PlatformError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidInput, e)))?;
-        
+
+        let path_cstr = CString::new(path.to_string_lossy().as_bytes()).map_err(|e| {
+            PlatformError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
+        })?;
+
         let mut statvfs = MaybeUninit::<libc::statvfs>::uninit();
-        
-        let result = unsafe {
-            libc::statvfs(path_cstr.as_ptr(), statvfs.as_mut_ptr())
-        };
-        
+
+        let result = unsafe { libc::statvfs(path_cstr.as_ptr(), statvfs.as_mut_ptr()) };
+
         if result != 0 {
             return Err(PlatformError::IoError(std::io::Error::last_os_error()));
         }
-        
+
         let statvfs = unsafe { statvfs.assume_init() };
-        
+
         let block_size = statvfs.f_frsize as u64;
         let total_blocks = statvfs.f_blocks as u64;
         let available_blocks = statvfs.f_bavail as u64;
-        
+
         Ok(FilesystemStats {
             total_space: total_blocks * block_size,
             available_space: available_blocks * block_size,
         })
     }
-    
+
     /// Create directory if it doesn't exist
     fn ensure_directory_exists(path: &Path) -> Result<(), PlatformError> {
         if !path.exists() {
-            std::fs::create_dir_all(path)
-                .map_err(|e| PlatformError::IoError(e))?;
+            std::fs::create_dir_all(path).map_err(|e| PlatformError::IoError(e))?;
         }
         Ok(())
     }
@@ -171,16 +194,16 @@ impl PlatformOps for LinuxPlatform {
         let mounts = Self::parse_proc_mounts()?;
         let mut devices = Vec::new();
         let mut seen_devices = HashMap::new();
-        
+
         for mount in mounts {
             // Skip if we've already processed this device
             if seen_devices.contains_key(&mount.device) {
                 continue;
             }
-            
+
             let device_info = Self::get_device_info(&mount.device)?;
             let fs_stats = Self::get_filesystem_stats(&mount.mount_point)?;
-            
+
             // Create a human-readable name
             let name = if mount.mount_point == PathBuf::from("/") {
                 format!("Root Filesystem ({})", mount.device)
@@ -189,7 +212,7 @@ impl PlatformOps for LinuxPlatform {
             } else {
                 format!("{} ({})", mount.mount_point.display(), mount.device)
             };
-            
+
             let storage_device = StorageDevice {
                 name,
                 mount_point: mount.mount_point,
@@ -197,17 +220,17 @@ impl PlatformOps for LinuxPlatform {
                 available_space: fs_stats.available_space,
                 device_type: device_info.device_type,
             };
-            
+
             devices.push(storage_device);
             seen_devices.insert(mount.device, ());
         }
-        
+
         // Sort devices by mount point for consistent ordering
         devices.sort_by(|a, b| a.mount_point.cmp(&b.mount_point));
-        
+
         Ok(devices)
     }
-    
+
     fn get_app_data_dir() -> Result<PathBuf, PlatformError> {
         // Use XDG Base Directory specification
         // First try XDG_DATA_HOME, then fall back to ~/.local/share
@@ -219,29 +242,27 @@ impl PlatformOps for LinuxPlatform {
             path.push("share");
             path
         } else {
-            return Err(PlatformError::IoError(
-                std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    "Neither XDG_DATA_HOME nor HOME environment variable found"
-                )
-            ));
+            return Err(PlatformError::IoError(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Neither XDG_DATA_HOME nor HOME environment variable found",
+            )));
         };
-        
+
         let mut app_data_dir = data_dir;
         app_data_dir.push("disk-speed-test");
-        
+
         // Ensure the directory exists
         Self::ensure_directory_exists(&app_data_dir)?;
-        
+
         Ok(app_data_dir)
     }
-    
+
     fn create_direct_io_file(path: &Path, size: u64) -> Result<File, PlatformError> {
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
             Self::ensure_directory_exists(parent)?;
         }
-        
+
         // Create file with O_DIRECT and O_SYNC for direct I/O
         let file = OpenOptions::new()
             .create(true)
@@ -263,23 +284,22 @@ impl PlatformOps for LinuxPlatform {
                     Err(PlatformError::IoError(e))
                 }
             })?;
-        
+
         // Set file size
-        file.set_len(size)
-            .map_err(PlatformError::IoError)?;
-        
+        file.set_len(size).map_err(PlatformError::IoError)?;
+
         Ok(file)
     }
-    
+
     fn open_direct_io_file(path: &Path, write: bool) -> Result<File, PlatformError> {
         let mut options = OpenOptions::new();
-        
+
         if write {
             options.write(true);
         } else {
             options.read(true);
         }
-        
+
         // Try with O_DIRECT first, fall back without it if not supported
         let file = options
             .custom_flags(O_DIRECT | O_SYNC)
@@ -299,29 +319,28 @@ impl PlatformOps for LinuxPlatform {
                 }
             })
             .map_err(PlatformError::IoError)?;
-        
+
         Ok(file)
     }
-    
+
     fn sync_file_system(path: &Path) -> Result<(), PlatformError> {
         // First try to sync the specific file if it exists
         if path.is_file() {
-            let file = File::open(path)
-                .map_err(PlatformError::IoError)?;
-            
+            let file = File::open(path).map_err(PlatformError::IoError)?;
+
             let fd = std::os::unix::io::AsRawFd::as_raw_fd(&file);
             let result = unsafe { fsync(fd) };
-            
+
             if result != 0 {
                 return Err(PlatformError::IoError(std::io::Error::last_os_error()));
             }
         }
-        
+
         // Then sync the entire filesystem
         unsafe {
             sync();
         }
-        
+
         Ok(())
     }
 }
@@ -351,17 +370,17 @@ struct FilesystemStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::io::Write;
+    use tempfile::TempDir;
 
     #[test]
     fn test_get_app_data_dir() {
         let result = LinuxPlatform::get_app_data_dir();
         assert!(result.is_ok());
-        
+
         let path = result.unwrap();
         assert!(path.to_string_lossy().contains("disk-speed-test"));
-        
+
         // Should contain either .local/share or XDG_DATA_HOME
         let path_str = path.to_string_lossy();
         assert!(path_str.contains(".local/share") || std::env::var("XDG_DATA_HOME").is_ok());
@@ -370,14 +389,14 @@ mod tests {
     #[test]
     fn test_list_storage_devices() {
         let result = LinuxPlatform::list_storage_devices();
-        
+
         // This should work on any Linux system
         assert!(result.is_ok());
-        
+
         let devices = result.unwrap();
         // Should have at least the root filesystem
         assert!(!devices.is_empty());
-        
+
         // Check that we have reasonable device information
         for device in &devices {
             assert!(!device.name.is_empty());
@@ -392,8 +411,11 @@ mod tests {
         // Real filesystems
         assert!(LinuxPlatform::is_real_filesystem("/dev/sda1", "ext4"));
         assert!(LinuxPlatform::is_real_filesystem("/dev/nvme0n1p1", "xfs"));
-        assert!(LinuxPlatform::is_real_filesystem("/dev/mapper/root", "btrfs"));
-        
+        assert!(LinuxPlatform::is_real_filesystem(
+            "/dev/mapper/root",
+            "btrfs"
+        ));
+
         // Virtual filesystems should be filtered out
         assert!(!LinuxPlatform::is_real_filesystem("proc", "proc"));
         assert!(!LinuxPlatform::is_real_filesystem("sysfs", "sysfs"));
@@ -406,20 +428,20 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("test_direct_io.dat");
         let file_size = 1024 * 1024; // 1MB
-        
+
         // Test file creation
         let result = LinuxPlatform::create_direct_io_file(&test_file, file_size);
         assert!(result.is_ok());
-        
+
         // Verify file exists and has correct size
         assert!(test_file.exists());
         let metadata = std::fs::metadata(&test_file).unwrap();
         assert_eq!(metadata.len(), file_size);
-        
+
         // Test opening for read
         let read_result = LinuxPlatform::open_direct_io_file(&test_file, false);
         assert!(read_result.is_ok());
-        
+
         // Test opening for write
         let write_result = LinuxPlatform::open_direct_io_file(&test_file, true);
         assert!(write_result.is_ok());
@@ -429,16 +451,16 @@ mod tests {
     fn test_sync_file_system() {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("test_sync.dat");
-        
+
         // Create a test file
         let mut file = File::create(&test_file).unwrap();
         file.write_all(b"test data").unwrap();
         drop(file);
-        
+
         // Test sync
         let result = LinuxPlatform::sync_file_system(&test_file);
         assert!(result.is_ok());
-        
+
         // Test sync on directory
         let dir_result = LinuxPlatform::sync_file_system(temp_dir.path());
         assert!(dir_result.is_ok());
@@ -448,18 +470,18 @@ mod tests {
     fn test_ensure_directory_exists() {
         let temp_dir = TempDir::new().unwrap();
         let nested_dir = temp_dir.path().join("nested").join("directory");
-        
+
         // Directory shouldn't exist initially
         assert!(!nested_dir.exists());
-        
+
         // Create it
         let result = LinuxPlatform::ensure_directory_exists(&nested_dir);
         assert!(result.is_ok());
-        
+
         // Should exist now
         assert!(nested_dir.exists());
         assert!(nested_dir.is_dir());
-        
+
         // Calling again should be fine
         let result2 = LinuxPlatform::ensure_directory_exists(&nested_dir);
         assert!(result2.is_ok());
@@ -470,10 +492,10 @@ mod tests {
         // Test device type determination
         let info = LinuxPlatform::get_device_info("/dev/sda1");
         assert!(info.is_ok());
-        
+
         let info = LinuxPlatform::get_device_info("/dev/nvme0n1p1");
         assert!(info.is_ok());
-        
+
         // Test unknown device
         let info = LinuxPlatform::get_device_info("/dev/unknown123");
         assert!(info.is_ok());
@@ -489,7 +511,7 @@ mod tests {
             assert!(result.is_ok());
             assert!(!result.unwrap().trim().is_empty());
         }
-        
+
         // Test reading non-existent file
         let result = LinuxPlatform::read_sys_file("/sys/nonexistent/file");
         assert!(result.is_err());
@@ -499,11 +521,11 @@ mod tests {
     fn test_platform_integration() {
         // Test that the Linux platform can be called through the platform abstraction
         // This test will only run on Linux, but ensures the integration works
-        
+
         // Test app data directory
         let app_data_result = LinuxPlatform::get_app_data_dir();
         assert!(app_data_result.is_ok());
-        
+
         // Test device listing (should work even if no devices found)
         let devices_result = LinuxPlatform::list_storage_devices();
         assert!(devices_result.is_ok());

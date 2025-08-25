@@ -1,7 +1,7 @@
 //! Tests for CLI display and output formatting
 
 use super::*;
-use disk_speed_test::core::{TestResult, BenchmarkResults, ProgressCallback};
+use disk_speed_test::core::{BenchmarkResults, ProgressCallback, TestResult};
 use std::time::Duration;
 
 /// Create a sample test result for testing
@@ -11,7 +11,7 @@ fn create_sample_test_result() -> TestResult {
         150.0, // max_speed_mbps
         100.0, // avg_speed_mbps
         Duration::from_secs(10),
-        100,   // sample_count
+        100, // sample_count
     )
 }
 
@@ -30,7 +30,7 @@ fn create_sample_benchmark_results() -> BenchmarkResults {
 fn test_cli_progress_callback_creation() {
     let callback = CliProgressCallback::new(OutputFormat::Table);
     assert!(!callback.verbose);
-    
+
     let verbose_callback = CliProgressCallback::new_verbose(OutputFormat::Json);
     assert!(verbose_callback.verbose);
 }
@@ -38,7 +38,7 @@ fn test_cli_progress_callback_creation() {
 #[test]
 fn test_format_speed() {
     let callback = CliProgressCallback::new(OutputFormat::Table);
-    
+
     // Test various speed ranges
     assert_eq!(callback.format_speed(0.5), "0.500 MB/s");
     assert_eq!(callback.format_speed(1.5), "1.50 MB/s");
@@ -50,23 +50,26 @@ fn test_format_speed() {
 #[test]
 fn test_format_duration() {
     let callback = CliProgressCallback::new(OutputFormat::Table);
-    
+
     assert_eq!(callback.format_duration(Duration::from_secs(5)), "5.0s");
     assert_eq!(callback.format_duration(Duration::from_secs(65)), "1m 5s");
     assert_eq!(callback.format_duration(Duration::from_secs(125)), "2m 5s");
-    assert_eq!(callback.format_duration(Duration::from_millis(1500)), "1.5s");
+    assert_eq!(
+        callback.format_duration(Duration::from_millis(1500)),
+        "1.5s"
+    );
 }
 
 #[test]
 fn test_colorize_functionality() {
     let callback = CliProgressCallback::new(OutputFormat::Table);
-    
+
     // Test colorization (exact output depends on terminal support)
     let colored = callback.colorize("test", "1;32");
-    
+
     // Should either be colored or plain text
     assert!(colored.contains("test"));
-    
+
     // Test with colors disabled
     let mut no_color_callback = CliProgressCallback::new(OutputFormat::Table);
     no_color_callback.use_colors = false;
@@ -78,7 +81,7 @@ fn test_colorize_functionality() {
 fn test_progress_callback_interface() {
     let callback = CliProgressCallback::new(OutputFormat::Table);
     let test_result = create_sample_test_result();
-    
+
     // These should not panic
     callback.on_test_start("Sequential Write");
     callback.on_progress("Sequential Write", 75.5);
@@ -88,13 +91,13 @@ fn test_progress_callback_interface() {
 #[test]
 fn test_create_progress_bar() {
     let callback = CliProgressCallback::new(OutputFormat::Table);
-    
+
     // Test different widths
     let bar_0 = callback.create_progress_bar(0);
     let bar_10 = callback.create_progress_bar(10);
     let bar_20 = callback.create_progress_bar(20);
     let bar_30 = callback.create_progress_bar(30); // Should be capped at 20
-    
+
     // All should contain brackets
     assert!(bar_0.contains("["));
     assert!(bar_0.contains("]"));
@@ -109,19 +112,22 @@ fn test_create_progress_bar() {
 #[test]
 fn test_extreme_values() {
     let _extreme_result = TestResult::new(
-        0.001,  // Very small min
-        10000.0, // Very large max
-        5000.0,  // Large average
+        0.001,                     // Very small min
+        10000.0,                   // Very large max
+        5000.0,                    // Large average
         Duration::from_secs(3600), // 1 hour
-        50000,   // Many samples
+        50000,                     // Many samples
     );
-    
+
     let callback = CliProgressCallback::new(OutputFormat::Table);
-    
+
     // Should handle extreme values without panicking
     assert!(callback.format_speed(0.001).contains("0.001"));
     assert!(callback.format_speed(10000.0).contains("10.0 GB/s"));
-    assert_eq!(callback.format_duration(Duration::from_secs(3600)), "60m 0s");
+    assert_eq!(
+        callback.format_duration(Duration::from_secs(3600)),
+        "60m 0s"
+    );
 }
 
 /// Integration test for complete workflow
@@ -129,14 +135,14 @@ fn test_extreme_values() {
 fn test_complete_display_workflow() {
     let results = create_sample_benchmark_results();
     let callback = CliProgressCallback::new(OutputFormat::Table);
-    
+
     // Simulate complete test workflow
     callback.on_test_start("Sequential Write");
     callback.on_progress("Sequential Write", 50.0);
     callback.on_progress("Sequential Write", 75.0);
     callback.on_progress("Sequential Write", 100.0);
     callback.on_test_complete("Sequential Write", &results.sequential_write);
-    
+
     callback.on_test_start("Sequential Read");
     callback.on_progress("Sequential Read", 60.0);
     callback.on_test_complete("Sequential Read", &results.sequential_read);

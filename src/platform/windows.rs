@@ -1,29 +1,29 @@
 //! Windows-specific platform operations
 
-use std::path::{Path, PathBuf};
-use std::fs::File;
-use std::os::windows::io::{AsRawHandle, FromRawHandle};
-use std::ptr;
 use std::ffi::OsString;
+use std::fs::File;
 use std::os::windows::ffi::OsStringExt;
+use std::os::windows::io::{AsRawHandle, FromRawHandle};
+use std::path::{Path, PathBuf};
+use std::ptr;
+use winapi::shared::minwindef::{DWORD, FALSE};
+use winapi::shared::winerror::{ERROR_INSUFFICIENT_BUFFER, ERROR_SUCCESS};
+use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{
-    CreateFileW, GetDiskFreeSpaceExW, FlushFileBuffers, SetFilePointerEx, SetEndOfFile
-};
-use winapi::um::winbase::{
-    GetLogicalDrives, GetDriveTypeW, DRIVE_FIXED, DRIVE_REMOVABLE, DRIVE_CDROM, 
-    DRIVE_RAMDISK, DRIVE_REMOTE, DRIVE_UNKNOWN, FILE_FLAG_NO_BUFFERING, 
-    FILE_FLAG_WRITE_THROUGH, FILE_FLAG_SEQUENTIAL_SCAN
-};
-use winapi::um::winnt::{
-    GENERIC_READ, GENERIC_WRITE, FILE_SHARE_READ, FILE_SHARE_WRITE,
-    CREATE_ALWAYS, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, LARGE_INTEGER
+    CreateFileW, FlushFileBuffers, GetDiskFreeSpaceExW, SetEndOfFile, SetFilePointerEx,
 };
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-use winapi::um::errhandlingapi::GetLastError;
-use winapi::shared::minwindef::{DWORD, FALSE};
-use winapi::shared::winerror::{ERROR_SUCCESS, ERROR_INSUFFICIENT_BUFFER};
+use winapi::um::winbase::{
+    GetDriveTypeW, GetLogicalDrives, DRIVE_CDROM, DRIVE_FIXED, DRIVE_RAMDISK, DRIVE_REMOTE,
+    DRIVE_REMOVABLE, DRIVE_UNKNOWN, FILE_FLAG_NO_BUFFERING, FILE_FLAG_SEQUENTIAL_SCAN,
+    FILE_FLAG_WRITE_THROUGH,
+};
+use winapi::um::winnt::{
+    CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ,
+    GENERIC_WRITE, LARGE_INTEGER, OPEN_EXISTING,
+};
 
-use super::{PlatformOps, StorageDevice, DeviceType, PlatformError};
+use super::{DeviceType, PlatformError, PlatformOps, StorageDevice};
 
 /// Windows platform implementation
 pub struct WindowsPlatform;
@@ -78,19 +78,19 @@ impl WindowsPlatform {
     /// Set file size using Windows API
     fn set_file_size(file: &File, size: u64) -> Result<(), PlatformError> {
         let handle = file.as_raw_handle();
-        
+
         unsafe {
             // Set file pointer to the desired size
             let mut distance = LARGE_INTEGER::default();
             *distance.QuadPart_mut() = size as i64;
-            
+
             let result = SetFilePointerEx(
                 handle as winapi::um::winnt::HANDLE,
                 distance,
                 ptr::null_mut(),
                 winapi::um::winbase::FILE_BEGIN,
             );
-            
+
             if result == FALSE {
                 return Err(PlatformError::IoError(std::io::Error::last_os_error()));
             }
@@ -109,12 +109,12 @@ impl WindowsPlatform {
 impl PlatformOps for WindowsPlatform {
     fn list_storage_devices() -> Result<Vec<StorageDevice>, PlatformError> {
         let mut devices = Vec::new();
-        
+
         unsafe {
             let drives_mask = GetLogicalDrives();
             if drives_mask == 0 {
                 return Err(PlatformError::DeviceEnumerationFailed(
-                    "Failed to get logical drives".to_string()
+                    "Failed to get logical drives".to_string(),
                 ));
             }
 
@@ -124,26 +124,26 @@ impl PlatformOps for WindowsPlatform {
                     let drive_letter = (b'A' + i) as char;
                     let drive_path = format!("{}:\\", drive_letter);
                     let drive_root = format!("{}:\\", drive_letter);
-                    
+
                     // Convert to wide string for Windows API
                     let wide_path: Vec<u16> = OsString::from(&drive_root)
                         .encode_wide()
                         .chain(std::iter::once(0))
                         .collect();
-                    
+
                     let drive_type = GetDriveTypeW(wide_path.as_ptr());
-                    
+
                     // Skip unknown drives and some system drives
                     if drive_type == DRIVE_UNKNOWN {
                         continue;
                     }
-                    
+
                     // Get disk space information
                     let (total_space, available_space) = match Self::get_disk_space(&drive_root) {
                         Ok((total, available)) => (total, available),
                         Err(_) => continue, // Skip drives we can't access
                     };
-                    
+
                     let device = StorageDevice {
                         name: format!("Drive {}", drive_letter),
                         mount_point: PathBuf::from(drive_path),
@@ -151,28 +151,29 @@ impl PlatformOps for WindowsPlatform {
                         available_space,
                         device_type: Self::drive_type_to_device_type(drive_type),
                     };
-                    
+
                     devices.push(device);
                 }
             }
         }
-        
+
         Ok(devices)
     }
-    
+
     fn get_app_data_dir() -> Result<PathBuf, PlatformError> {
         std::env::var("LOCALAPPDATA")
             .map(|path| PathBuf::from(path).join("disk-speed-test"))
-            .map_err(|_| PlatformError::IoError(
-                std::io::Error::new(
+            .map_err(|_| {
+                PlatformError::IoError(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    "LOCALAPPDATA environment variable not found"
-                )
-            ))
+                    "LOCALAPPDATA environment variable not found",
+                ))
+            })
     }
-    
+
     fn create_direct_io_file(path: &Path, size: u64) -> Result<File, PlatformError> {
-        let wide_path: Vec<u16> = path.as_os_str()
+        let wide_path: Vec<u16> = path
+            .as_os_str()
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
@@ -184,21 +185,25 @@ impl PlatformOps for WindowsPlatform {
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 ptr::null_mut(),
                 CREATE_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_SEQUENTIAL_SCAN,
+                FILE_ATTRIBUTE_NORMAL
+                    | FILE_FLAG_NO_BUFFERING
+                    | FILE_FLAG_WRITE_THROUGH
+                    | FILE_FLAG_SEQUENTIAL_SCAN,
                 ptr::null_mut(),
             );
 
             let file = Self::handle_to_file(handle)?;
-            
+
             // Set the file size
             Self::set_file_size(&file, size)?;
-            
+
             Ok(file)
         }
     }
-    
+
     fn open_direct_io_file(path: &Path, write: bool) -> Result<File, PlatformError> {
-        let wide_path: Vec<u16> = path.as_os_str()
+        let wide_path: Vec<u16> = path
+            .as_os_str()
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
@@ -216,33 +221,34 @@ impl PlatformOps for WindowsPlatform {
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 ptr::null_mut(),
                 OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_SEQUENTIAL_SCAN,
+                FILE_ATTRIBUTE_NORMAL
+                    | FILE_FLAG_NO_BUFFERING
+                    | FILE_FLAG_WRITE_THROUGH
+                    | FILE_FLAG_SEQUENTIAL_SCAN,
                 ptr::null_mut(),
             );
 
             Self::handle_to_file(handle)
         }
     }
-    
+
     fn sync_file_system(path: &Path) -> Result<(), PlatformError> {
         // For Windows, we'll open the file and flush it
-        let file = std::fs::File::open(path)
-            .map_err(|e| PlatformError::IoError(e))?;
-        
+        let file = std::fs::File::open(path).map_err(|e| PlatformError::IoError(e))?;
+
         let handle = file.as_raw_handle();
-        
+
         unsafe {
             let result = FlushFileBuffers(handle as winapi::um::winnt::HANDLE);
             if result == FALSE {
                 return Err(PlatformError::IoError(std::io::Error::last_os_error()));
             }
         }
-        
+
         Ok(())
     }
 }
-#[cfg
-(test)]
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::fs;
@@ -252,10 +258,10 @@ mod tests {
     #[cfg(target_os = "windows")]
     fn test_list_storage_devices() {
         let devices = WindowsPlatform::list_storage_devices().unwrap();
-        
+
         // Should have at least one device (C: drive typically exists)
         assert!(!devices.is_empty());
-        
+
         // Check that each device has valid properties
         for device in &devices {
             assert!(!device.name.is_empty());
@@ -270,13 +276,13 @@ mod tests {
     #[cfg(target_os = "windows")]
     fn test_get_app_data_dir() {
         let app_data_dir = WindowsPlatform::get_app_data_dir().unwrap();
-        
+
         // Should end with our app name
         assert!(app_data_dir.ends_with("disk-speed-test"));
-        
+
         // Should be an absolute path
         assert!(app_data_dir.is_absolute());
-        
+
         // Should contain LOCALAPPDATA path
         let local_app_data = std::env::var("LOCALAPPDATA").unwrap();
         assert!(app_data_dir.starts_with(&local_app_data));
@@ -309,22 +315,43 @@ mod tests {
     fn test_sync_file_system() {
         let temp_dir = TempDir::new().unwrap();
         let test_file_path = temp_dir.path().join("test_sync.txt");
-        
+
         // Create a test file
         fs::write(&test_file_path, "test data").unwrap();
-        
+
         // Sync should not fail
         WindowsPlatform::sync_file_system(&test_file_path).unwrap();
     }
 
     #[test]
     fn test_drive_type_conversion() {
-        assert_eq!(WindowsPlatform::drive_type_to_device_type(DRIVE_FIXED), DeviceType::HardDisk);
-        assert_eq!(WindowsPlatform::drive_type_to_device_type(DRIVE_REMOVABLE), DeviceType::Removable);
-        assert_eq!(WindowsPlatform::drive_type_to_device_type(DRIVE_CDROM), DeviceType::OpticalDisk);
-        assert_eq!(WindowsPlatform::drive_type_to_device_type(DRIVE_RAMDISK), DeviceType::RamDisk);
-        assert_eq!(WindowsPlatform::drive_type_to_device_type(DRIVE_REMOTE), DeviceType::Network);
-        assert_eq!(WindowsPlatform::drive_type_to_device_type(DRIVE_UNKNOWN), DeviceType::Unknown);
-        assert_eq!(WindowsPlatform::drive_type_to_device_type(999), DeviceType::Unknown); // Invalid type
+        assert_eq!(
+            WindowsPlatform::drive_type_to_device_type(DRIVE_FIXED),
+            DeviceType::HardDisk
+        );
+        assert_eq!(
+            WindowsPlatform::drive_type_to_device_type(DRIVE_REMOVABLE),
+            DeviceType::Removable
+        );
+        assert_eq!(
+            WindowsPlatform::drive_type_to_device_type(DRIVE_CDROM),
+            DeviceType::OpticalDisk
+        );
+        assert_eq!(
+            WindowsPlatform::drive_type_to_device_type(DRIVE_RAMDISK),
+            DeviceType::RamDisk
+        );
+        assert_eq!(
+            WindowsPlatform::drive_type_to_device_type(DRIVE_REMOTE),
+            DeviceType::Network
+        );
+        assert_eq!(
+            WindowsPlatform::drive_type_to_device_type(DRIVE_UNKNOWN),
+            DeviceType::Unknown
+        );
+        assert_eq!(
+            WindowsPlatform::drive_type_to_device_type(999),
+            DeviceType::Unknown
+        ); // Invalid type
     }
 }
