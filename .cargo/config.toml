@@ -20,8 +20,9 @@ rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "target-feature=+crt-static"]
+#[target.x86_64-unknown-linux-gnu]
+# Avoid forcing static CRT on GNU: it breaks proc-macro/dylib builds used by the compiler
+#rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.aarch64-unknown-linux-gnu]
 linker = "aarch64-linux-gnu-gcc"
