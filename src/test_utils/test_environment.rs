@@ -115,6 +115,7 @@ impl TestEnvironment {
             },
             test_duration_seconds: if self.config.use_small_files { 1 } else { 5 },
             disable_os_cache: true,
+            disable_direct_io: false, // Enable direct I/O by default for testing
             file_size_mb: if self.config.use_small_files { 1 } else { 100 },
         }
     }

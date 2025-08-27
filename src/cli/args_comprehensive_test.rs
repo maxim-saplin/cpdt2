@@ -114,6 +114,7 @@ mod tests {
                 duration,
                 file_size,
                 enable_cache,
+                disable_direct_io: _,
                 output_format,
             } => {
                 assert_eq!(target_path, PathBuf::from("/tmp/test"));

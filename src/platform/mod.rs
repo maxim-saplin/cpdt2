@@ -56,7 +56,7 @@ pub enum PlatformError {
     #[error("Device enumeration failed: {0}")]
     DeviceEnumerationFailed(String),
 
-    #[error("Direct I/O not supported on this platform")]
+    #[error("Direct I/O not supported on this filesystem or platform. This may occur on virtualized filesystems, containers with certain configurations, or filesystems that don't support O_DIRECT. Try running the benchmark with --disable-direct-io flag to use buffered I/O instead.")]
     DirectIoNotSupported,
 
     #[error("Insufficient permissions: {0}")]
@@ -281,4 +281,14 @@ pub fn sync_file_system(path: &Path) -> Result<(), PlatformError> {
         target_os = "ios"
     )))]
     compile_error!("Unsupported platform");
+}
+
+/// Convenience function to align block size for direct I/O compatibility
+pub fn align_block_size_for_direct_io(block_size: usize) -> usize {
+    #[cfg(target_os = "linux")]
+    return linux::LinuxPlatform::align_block_size_for_direct_io(block_size);
+
+    // For other platforms, return the original size for now
+    #[cfg(not(target_os = "linux"))]
+    return block_size;
 }

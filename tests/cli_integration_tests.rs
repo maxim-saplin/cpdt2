@@ -109,6 +109,7 @@ fn test_cli_benchmark_basic() {
         .arg("1") // Short test
         .arg("--file-size")
         .arg("1MB") // Small file
+        .arg("--disable-direct-io") // Use buffered I/O for compatibility
         .output()
         .expect("Failed to execute command");
 
@@ -145,6 +146,7 @@ fn test_cli_benchmark_with_custom_parameters() {
         .arg("--file-size")
         .arg("2MB")
         .arg("--enable-cache")
+        .arg("--disable-direct-io") // Use buffered I/O for compatibility
         .output()
         .expect("Failed to execute command");
 
@@ -178,6 +180,7 @@ fn test_cli_benchmark_json_output() {
         .arg("1MB")
         .arg("--output-format")
         .arg("json")
+        .arg("--disable-direct-io") // Use buffered I/O for compatibility
         .output()
         .expect("Failed to execute command");
 
@@ -216,6 +219,7 @@ fn test_cli_benchmark_csv_output() {
         .arg("1MB")
         .arg("--output-format")
         .arg("csv")
+        .arg("--disable-direct-io") // Use buffered I/O for compatibility
         .output()
         .expect("Failed to execute command");
 
@@ -426,6 +430,7 @@ fn test_cli_configuration_display() {
         .arg("--file-size")
         .arg("1MB")
         .arg("--enable-cache")
+        .arg("--disable-direct-io") // Use buffered I/O for compatibility
         .output()
         .expect("Failed to execute command");
 
@@ -454,6 +459,7 @@ fn test_cli_progress_display() {
         .arg("1")
         .arg("--file-size")
         .arg("1MB")
+        .arg("--disable-direct-io") // Use buffered I/O for compatibility
         .output()
         .expect("Failed to execute command");
 
@@ -481,6 +487,7 @@ fn test_cli_exit_codes() {
         .arg("1")
         .arg("--file-size")
         .arg("1MB")
+        .arg("--disable-direct-io") // Use buffered I/O for compatibility
         .output()
         .expect("Failed to execute command");
 

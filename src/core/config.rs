@@ -22,6 +22,10 @@ pub struct BenchmarkConfig {
     /// Whether to disable OS caching (default: true)
     pub disable_os_cache: bool,
 
+    /// Whether to disable direct I/O operations (default: false)
+    /// When true, uses buffered I/O which may be slower but more compatible
+    pub disable_direct_io: bool,
+
     /// Size of test file in MB (default: 1024)
     pub file_size_mb: usize,
 }
@@ -34,6 +38,7 @@ impl Default for BenchmarkConfig {
             random_block_size: 4 * 1024,            // 4KB
             test_duration_seconds: 10,
             disable_os_cache: true,
+            disable_direct_io: false, // Enable direct I/O by default for performance
             file_size_mb: 1024, // 1GB
         }
     }

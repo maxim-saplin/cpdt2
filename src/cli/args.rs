@@ -46,6 +46,12 @@ pub enum Commands {
         #[arg(long)]
         enable_cache: bool,
 
+        /// Disable direct I/O operations (use buffered I/O instead)
+        /// This may reduce performance measurement accuracy but ensures compatibility
+        /// with all filesystems and virtualized environments
+        #[arg(long)]
+        disable_direct_io: bool,
+
         /// Output format
         #[arg(long, short = 'o', value_enum, default_value_t = OutputFormat::Table)]
         output_format: OutputFormat,

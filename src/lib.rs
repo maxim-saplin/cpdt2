@@ -34,6 +34,7 @@ pub use platform::{DeviceType, PlatformError, PlatformOps, StorageDevice};
 ///     random_block_size: 4 * 1024,            // 4KB
 ///     test_duration_seconds: 10,
 ///     disable_os_cache: true,
+///     disable_direct_io: false, // Enable direct I/O for performance
 ///     file_size_mb: 1024, // 1GB
 /// };
 ///

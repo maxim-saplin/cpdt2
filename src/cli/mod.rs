@@ -38,6 +38,7 @@ pub fn run_cli() -> Result<()> {
             duration,
             file_size,
             enable_cache,
+            disable_direct_io,
             output_format,
         } => {
             run_benchmark_command(
@@ -47,6 +48,7 @@ pub fn run_cli() -> Result<()> {
                 duration,
                 file_size,
                 enable_cache,
+                disable_direct_io,
                 output_format,
             )?;
         }
@@ -63,6 +65,7 @@ fn run_benchmark_command(
     duration: Option<u64>,
     file_size: Option<String>,
     enable_cache: bool,
+    disable_direct_io: bool,
     output_format: OutputFormat,
 ) -> Result<()> {
     // Create benchmark configuration
@@ -94,6 +97,9 @@ fn run_benchmark_command(
 
     // Set cache behavior (note: disable_os_cache is opposite of enable_cache)
     config.disable_os_cache = !enable_cache;
+
+    // Set direct I/O behavior
+    config.disable_direct_io = disable_direct_io;
 
     // Validate configuration with enhanced error reporting
     if let Err(e) = config.validate() {

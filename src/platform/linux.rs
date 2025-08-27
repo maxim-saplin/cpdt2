@@ -12,6 +12,24 @@ use std::path::{Path, PathBuf};
 pub struct LinuxPlatform;
 
 impl LinuxPlatform {
+    /// Get the logical sector size for alignment (typically 512 bytes)
+    const SECTOR_SIZE: u64 = 512;
+
+    /// Align a size to sector boundaries for direct I/O compatibility
+    fn align_to_sector_size(size: u64) -> u64 {
+        let remainder = size % Self::SECTOR_SIZE;
+        if remainder == 0 {
+            size
+        } else {
+            size + (Self::SECTOR_SIZE - remainder)
+        }
+    }
+
+    /// Ensure block size is compatible with direct I/O (multiple of sector size)
+    pub fn align_block_size_for_direct_io(block_size: usize) -> usize {
+        Self::align_to_sector_size(block_size as u64) as usize
+    }
+
     /// Parse /proc/mounts to get mounted filesystems
     fn parse_proc_mounts() -> Result<Vec<MountInfo>, PlatformError> {
         let file = File::open("/proc/mounts").map_err(|e| {
@@ -263,30 +281,24 @@ impl PlatformOps for LinuxPlatform {
             Self::ensure_directory_exists(parent)?;
         }
 
-        // Create file with O_DIRECT and O_SYNC for direct I/O, falling back if O_DIRECT unsupported
-        let file = OpenOptions::new()
+        // Try to create file with O_DIRECT and O_SYNC for direct I/O
+        let file = match OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .custom_flags(O_DIRECT | O_SYNC)
-            .open(path)
-            .or_else(|e| {
-                if e.raw_os_error() == Some(libc::EINVAL) {
-                    // O_DIRECT not supported on this filesystem, try without it
-                    OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .truncate(true)
-                        .custom_flags(O_SYNC)
-                        .open(path)
-                } else {
-                    Err(e)
-                }
-            })
-            .map_err(PlatformError::IoError)?;
+            .open(path) {
+            Ok(file) => file,
+            Err(e) if e.raw_os_error() == Some(libc::EINVAL) => {
+                // O_DIRECT not supported on this filesystem
+                return Err(PlatformError::DirectIoNotSupported);
+            }
+            Err(e) => return Err(PlatformError::IoError(e)),
+        };
 
-        // Set file size
-        file.set_len(size).map_err(PlatformError::IoError)?;
+        // Set file size - ensure it's aligned to sector boundaries for direct I/O
+        let aligned_size = Self::align_to_sector_size(size);
+        file.set_len(aligned_size).map_err(PlatformError::IoError)?;
 
         Ok(file)
     }
@@ -300,25 +312,15 @@ impl PlatformOps for LinuxPlatform {
             options.read(true);
         }
 
-        // Try with O_DIRECT first, fall back without it if not supported
-        let file = options
-            .custom_flags(O_DIRECT | O_SYNC)
-            .open(path)
-            .or_else(|e| {
-                if e.raw_os_error() == Some(libc::EINVAL) {
-                    // O_DIRECT not supported, try without it
-                    let mut fallback_options = OpenOptions::new();
-                    if write {
-                        fallback_options.write(true);
-                    } else {
-                        fallback_options.read(true);
-                    }
-                    fallback_options.custom_flags(O_SYNC).open(path)
-                } else {
-                    Err(e)
-                }
-            })
-            .map_err(PlatformError::IoError)?;
+        // Try to open file with O_DIRECT 
+        let file = match options.custom_flags(O_DIRECT | O_SYNC).open(path) {
+            Ok(file) => file,
+            Err(e) if e.raw_os_error() == Some(libc::EINVAL) => {
+                // O_DIRECT not supported on this filesystem
+                return Err(PlatformError::DirectIoNotSupported);
+            }
+            Err(e) => return Err(PlatformError::IoError(e)),
+        };
 
         Ok(file)
     }
