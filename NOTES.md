@@ -134,4 +134,5 @@ Markdown	1	16	0	8	24
 - Added some performance regressions tests, why? I am not creating an app that can be slow or fast, it measures the speed and reports it, what sort of regressions are we talking about? It either measures the speeds right or not, I don't need to measure performance regressions in the app itself!! Shouidl I measure startup time of if the progtress printed slowly?
 - CI/CD is broken - made a few attempts on Monday and abandond the idea
 - I look at 300+ tests and don't get why so many tets, what I they testing??? The app is super simnple!!
-- Tried improvig the speed of tests - Cursor faile. Tried Spec Driven with Kiro - also failed, yet I was few horus in determining that it went the unfeasable route accepting the BS "memmory mapped files" I made up confusing with in-memory files. ANyways even Kiro accepted it was an overengineered solution with 10+ tasks to make the tests run better
+  	- Tests are broken in Linux (Under dev containers) - some run infinetly
+	- Tried improvig the speed of tests - Cursor failed. Tried Spec Driven with Kiro - also failed, yet I was few horus in determining that it went the unfeasable route accepting the BS "memmory mapped files" I made up confusing with in-memory files. ANyways even Kiro accepted it was an overengineered solution with 10+ tasks to make the tests run better
