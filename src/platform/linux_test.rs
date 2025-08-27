@@ -8,6 +8,11 @@ mod tests {
     use std::path::PathBuf;
     use tempfile::TempDir;
 
+    #[cfg(target_os = "linux")]
+    use crate::platform::PlatformOps;
+    #[cfg(target_os = "linux")]
+    use std::path::Path;
+
     #[test]
     #[cfg(target_os = "linux")]
     fn test_linux_device_enumeration() {
