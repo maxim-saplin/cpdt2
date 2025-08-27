@@ -5,9 +5,11 @@ mod tests {
     #[cfg(target_os = "macos")]
     use super::super::macos::MacOsPlatform;
     use super::super::{DeviceType, PlatformError};
-    use crate::platform::PlatformOps;
+    #[cfg(target_os = "macos")]
     use std::fs;
-    use std::path::{Path, PathBuf};
+    #[cfg(target_os = "macos")]
+    use std::path::Path;
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     #[test]

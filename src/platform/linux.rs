@@ -4,7 +4,7 @@ use super::{DeviceType, PlatformError, PlatformOps, StorageDevice};
 use libc::{fsync, sync, O_DIRECT, O_SYNC};
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader};
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 
@@ -40,7 +40,7 @@ impl LinuxPlatform {
                     mounts.push(MountInfo {
                         device: device.to_string(),
                         mount_point: PathBuf::from(mount_point),
-                        fs_type: fs_type.to_string(),
+                        _fs_type: fs_type.to_string(),
                     });
                 }
             }
@@ -88,7 +88,7 @@ impl LinuxPlatform {
     }
 
     /// Get device information from /sys/block
-    pub fn get_device_info(device_path: &str) -> Result<DeviceInfo, PlatformError> {
+    pub(crate) fn get_device_info(device_path: &str) -> Result<DeviceInfo, PlatformError> {
         // Extract device name from path like /dev/sda1 -> sda
         let device_name = if let Some(name) = device_path.strip_prefix("/dev/") {
             // Remove partition numbers (e.g., sda1 -> sda, nvme0n1p1 -> nvme0n1)
@@ -106,7 +106,7 @@ impl LinuxPlatform {
         } else {
             return Ok(DeviceInfo {
                 device_type: DeviceType::Unknown,
-                rotational: None,
+                _rotational: None,
             });
         };
 
@@ -133,7 +133,7 @@ impl LinuxPlatform {
 
         Ok(DeviceInfo {
             device_type,
-            rotational,
+            _rotational: rotational,
         })
     }
 
@@ -170,9 +170,9 @@ impl LinuxPlatform {
 
         let statvfs = unsafe { statvfs.assume_init() };
 
-        let block_size = statvfs.f_frsize as u64;
-        let total_blocks = statvfs.f_blocks as u64;
-        let available_blocks = statvfs.f_bavail as u64;
+        let block_size = statvfs.f_frsize;
+        let total_blocks = statvfs.f_blocks;
+        let available_blocks = statvfs.f_bavail;
 
         Ok(FilesystemStats {
             total_space: total_blocks * block_size,
@@ -183,7 +183,7 @@ impl LinuxPlatform {
     /// Create directory if it doesn't exist
     fn ensure_directory_exists(path: &Path) -> Result<(), PlatformError> {
         if !path.exists() {
-            std::fs::create_dir_all(path).map_err(|e| PlatformError::IoError(e))?;
+            std::fs::create_dir_all(path).map_err(PlatformError::IoError)?;
         }
         Ok(())
     }
@@ -263,14 +263,14 @@ impl PlatformOps for LinuxPlatform {
             Self::ensure_directory_exists(parent)?;
         }
 
-        // Create file with O_DIRECT and O_SYNC for direct I/O
+        // Create file with O_DIRECT and O_SYNC for direct I/O, falling back if O_DIRECT unsupported
         let file = OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .custom_flags(O_DIRECT | O_SYNC)
             .open(path)
-            .map_err(|e| {
+            .or_else(|e| {
                 if e.raw_os_error() == Some(libc::EINVAL) {
                     // O_DIRECT not supported on this filesystem, try without it
                     OpenOptions::new()
@@ -279,11 +279,11 @@ impl PlatformOps for LinuxPlatform {
                         .truncate(true)
                         .custom_flags(O_SYNC)
                         .open(path)
-                        .map_err(PlatformError::IoError)
                 } else {
-                    Err(PlatformError::IoError(e))
+                    Err(e)
                 }
-            })?;
+            })
+            .map_err(PlatformError::IoError)?;
 
         // Set file size
         file.set_len(size).map_err(PlatformError::IoError)?;
@@ -350,14 +350,14 @@ impl PlatformOps for LinuxPlatform {
 struct MountInfo {
     device: String,
     mount_point: PathBuf,
-    fs_type: String,
+    _fs_type: String,
 }
 
 /// Device information from /sys/block
 #[derive(Debug)]
-struct DeviceInfo {
-    device_type: DeviceType,
-    rotational: Option<bool>,
+pub(crate) struct DeviceInfo {
+    pub(crate) device_type: DeviceType,
+    pub(crate) _rotational: Option<bool>,
 }
 
 /// Filesystem statistics

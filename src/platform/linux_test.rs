@@ -6,6 +6,7 @@ mod tests {
     use super::super::linux::LinuxPlatform;
     use super::super::{DeviceType, PlatformError};
     use std::path::PathBuf;
+    use std::fs;
     use tempfile::TempDir;
 
     #[cfg(target_os = "linux")]
@@ -161,19 +162,19 @@ mod tests {
 
         // Should have filtered out virtual filesystems
         for device in &devices {
-            let mount_str = device.mount_point.to_string_lossy();
+            let _mount_str = device.mount_point.to_string_lossy();
 
             // Should not contain virtual filesystem mount points
             assert!(
-                !mount_str.starts_with("/proc"),
+                !_mount_str.starts_with("/proc"),
                 "Should not include /proc mounts"
             );
             assert!(
-                !mount_str.starts_with("/sys"),
+                !_mount_str.starts_with("/sys"),
                 "Should not include /sys mounts"
             );
             assert!(
-                !mount_str.starts_with("/dev/pts"),
+                !_mount_str.starts_with("/dev/pts"),
                 "Should not include /dev/pts mounts"
             );
         }
@@ -278,7 +279,7 @@ mod tests {
 
             // Should contain either device path or mount point info
             let name_lower = device.name.to_lowercase();
-            let mount_str = device.mount_point.to_string_lossy().to_lowercase();
+            let _mount_str = device.mount_point.to_string_lossy().to_lowercase();
 
             // Name should be descriptive
             assert!(name_lower.len() > 3, "Device name should be descriptive");
