@@ -174,6 +174,7 @@ cargo llvm-cov --all-features --workspace --html --open
 - `RUST_BACKTRACE=1` - Enable backtraces for debugging
 - `DISK_SPEED_TEST_LOG=debug` - Enable debug logging
 - `DISK_SPEED_TEST_TEMP_DIR` - Custom temporary directory
+ - `DISK_SPEED_TEST_FAST_TEST_MS` - Override per-test duration in milliseconds for fast CI/dev runs (e.g., 50)
 
 ### Test Profiles
 

@@ -110,6 +110,7 @@ fn test_cli_benchmark_basic() {
         .arg("--file-size")
         .arg("1MB") // Small file
         .arg("--disable-direct-io") // Use buffered I/O for compatibility
+        .env("DISK_SPEED_TEST_FAST_TEST_MS", "50")
         .output()
         .expect("Failed to execute command");
 
@@ -147,6 +148,7 @@ fn test_cli_benchmark_with_custom_parameters() {
         .arg("2MB")
         .arg("--enable-cache")
         .arg("--disable-direct-io") // Use buffered I/O for compatibility
+        .env("DISK_SPEED_TEST_FAST_TEST_MS", "50")
         .output()
         .expect("Failed to execute command");
 
@@ -181,6 +183,7 @@ fn test_cli_benchmark_json_output() {
         .arg("--output-format")
         .arg("json")
         .arg("--disable-direct-io") // Use buffered I/O for compatibility
+        .env("DISK_SPEED_TEST_FAST_TEST_MS", "50")
         .output()
         .expect("Failed to execute command");
 
@@ -220,6 +223,7 @@ fn test_cli_benchmark_csv_output() {
         .arg("--output-format")
         .arg("csv")
         .arg("--disable-direct-io") // Use buffered I/O for compatibility
+        .env("DISK_SPEED_TEST_FAST_TEST_MS", "50")
         .output()
         .expect("Failed to execute command");
 
@@ -431,6 +435,7 @@ fn test_cli_configuration_display() {
         .arg("1MB")
         .arg("--enable-cache")
         .arg("--disable-direct-io") // Use buffered I/O for compatibility
+        .env("DISK_SPEED_TEST_FAST_TEST_MS", "50")
         .output()
         .expect("Failed to execute command");
 
@@ -460,6 +465,7 @@ fn test_cli_progress_display() {
         .arg("--file-size")
         .arg("1MB")
         .arg("--disable-direct-io") // Use buffered I/O for compatibility
+        .env("DISK_SPEED_TEST_FAST_TEST_MS", "50")
         .output()
         .expect("Failed to execute command");
 

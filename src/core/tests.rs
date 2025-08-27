@@ -4,6 +4,18 @@ use crate::core::{BenchmarkConfig, BenchmarkError, ProgressCallback, TestResult}
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 
+/// Determine effective test duration, honoring fast-test override via env var
+fn effective_test_duration(config: &BenchmarkConfig) -> std::time::Duration {
+    if let Ok(ms_str) = std::env::var("DISK_SPEED_TEST_FAST_TEST_MS") {
+        if let Ok(ms) = ms_str.parse::<u64>() {
+            if ms > 0 {
+                return std::time::Duration::from_millis(ms);
+            }
+        }
+    }
+    std::time::Duration::from_secs(config.test_duration_seconds)
+}
+
 /// Create a file for I/O operations, choosing between direct I/O and buffered I/O based on config
 fn create_io_file(
     config: &BenchmarkConfig,
@@ -90,7 +102,7 @@ pub fn run_sequential_write_test(
 ) -> Result<TestResult, BenchmarkError> {
     use crate::core::RealTimeStatsTracker;
     use std::io::Write;
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     // Report test start
     if let Some(callback) = progress_callback {
@@ -114,7 +126,8 @@ pub fn run_sequential_write_test(
     // Initialize statistics tracking
     let mut stats_tracker = RealTimeStatsTracker::new();
     let test_start = Instant::now();
-    let test_duration = Duration::from_secs(config.test_duration_seconds);
+    let test_duration = effective_test_duration(config);
+    let mut emitted_progress = false;
 
     // Track bytes written for wrap-around logic
     let mut bytes_written: u64 = 0;
@@ -139,6 +152,7 @@ pub fn run_sequential_write_test(
         {
             if let Some(callback) = progress_callback {
                 callback.on_progress("Sequential Write", current_speed);
+                emitted_progress = true;
             }
         }
 
@@ -164,6 +178,13 @@ pub fn run_sequential_write_test(
     // Finalize statistics
     let result = stats_tracker.finalize();
 
+    // Fallback: ensure at least one progress emission for very short tests
+    if !emitted_progress {
+        if let Some(callback) = progress_callback {
+            callback.on_progress("Sequential Write", result.avg_speed_mbps);
+        }
+    }
+
     // Report test completion
     if let Some(callback) = progress_callback {
         callback.on_test_complete("Sequential Write", &result);
@@ -180,7 +201,7 @@ pub fn run_sequential_read_test(
 ) -> Result<TestResult, BenchmarkError> {
     use crate::core::RealTimeStatsTracker;
     use std::io::Read;
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     // Report test start
     if let Some(callback) = progress_callback {
@@ -197,7 +218,8 @@ pub fn run_sequential_read_test(
     // Initialize statistics tracking
     let mut stats_tracker = RealTimeStatsTracker::new();
     let test_start = Instant::now();
-    let test_duration = Duration::from_secs(config.test_duration_seconds);
+    let test_duration = effective_test_duration(config);
+    let mut emitted_progress = false;
 
     // Track bytes read only for wrap-around checks
     let mut bytes_read: u64 = 0;
@@ -227,6 +249,7 @@ pub fn run_sequential_read_test(
                 {
                     if let Some(callback) = progress_callback {
                         callback.on_progress("Sequential Read", current_speed);
+                        emitted_progress = true;
                     }
                 }
             }
@@ -247,6 +270,13 @@ pub fn run_sequential_read_test(
     // Finalize statistics
     let result = stats_tracker.finalize();
 
+    // Fallback: ensure at least one progress emission for very short tests
+    if !emitted_progress {
+        if let Some(callback) = progress_callback {
+            callback.on_progress("Sequential Read", result.avg_speed_mbps);
+        }
+    }
+
     // Report test completion
     if let Some(callback) = progress_callback {
         callback.on_test_complete("Sequential Read", &result);
@@ -264,7 +294,7 @@ pub fn run_random_write_test(
     use crate::core::RealTimeStatsTracker;
     use rand::Rng;
     use std::io::{Seek, SeekFrom, Write};
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     // Report test start
     if let Some(callback) = progress_callback {
@@ -286,7 +316,8 @@ pub fn run_random_write_test(
     // Initialize statistics tracking
     let mut stats_tracker = RealTimeStatsTracker::new();
     let test_start = Instant::now();
-    let test_duration = Duration::from_secs(config.test_duration_seconds);
+    let test_duration = effective_test_duration(config);
+    let mut emitted_progress = false;
 
     let mut _bytes_written = 0u64;
     let file_size = config.file_size_bytes();
@@ -324,6 +355,7 @@ pub fn run_random_write_test(
         {
             if let Some(callback) = progress_callback {
                 callback.on_progress("Random Write", current_speed);
+                emitted_progress = true;
             }
         }
 
@@ -343,6 +375,13 @@ pub fn run_random_write_test(
     // Finalize statistics
     let result = stats_tracker.finalize();
 
+    // Fallback: ensure at least one progress emission for very short tests
+    if !emitted_progress {
+        if let Some(callback) = progress_callback {
+            callback.on_progress("Random Write", result.avg_speed_mbps);
+        }
+    }
+
     // Report test completion
     if let Some(callback) = progress_callback {
         callback.on_test_complete("Random Write", &result);
@@ -360,7 +399,7 @@ pub fn run_random_read_test(
     use crate::core::RealTimeStatsTracker;
     use rand::Rng;
     use std::io::{Read, Seek, SeekFrom};
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     // Report test start
     if let Some(callback) = progress_callback {
@@ -377,7 +416,8 @@ pub fn run_random_read_test(
     // Initialize statistics tracking
     let mut stats_tracker = RealTimeStatsTracker::new();
     let test_start = Instant::now();
-    let test_duration = Duration::from_secs(config.test_duration_seconds);
+    let test_duration = effective_test_duration(config);
+    let mut emitted_progress = false;
 
     let _bytes_read = 0u64;
     let file_size = config.file_size_bytes();
@@ -419,6 +459,7 @@ pub fn run_random_read_test(
                 {
                     if let Some(callback) = progress_callback {
                         callback.on_progress("Random Read", current_speed);
+                        emitted_progress = true;
                     }
                 }
             }
@@ -432,6 +473,13 @@ pub fn run_random_read_test(
 
     // Finalize statistics
     let result = stats_tracker.finalize();
+
+    // Fallback: ensure at least one progress emission for very short tests
+    if !emitted_progress {
+        if let Some(callback) = progress_callback {
+            callback.on_progress("Random Read", result.avg_speed_mbps);
+        }
+    }
 
     // Report test completion
     if let Some(callback) = progress_callback {
@@ -447,7 +495,7 @@ pub fn run_memory_copy_test(
     progress_callback: Option<&dyn ProgressCallback>,
 ) -> Result<TestResult, BenchmarkError> {
     use crate::core::RealTimeStatsTracker;
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     // Report test start
     if let Some(callback) = progress_callback {
@@ -471,7 +519,8 @@ pub fn run_memory_copy_test(
     // Initialize statistics tracking
     let mut stats_tracker = RealTimeStatsTracker::new();
     let test_start = Instant::now();
-    let test_duration = Duration::from_secs(config.test_duration_seconds);
+    let test_duration = effective_test_duration(config);
+    let mut emitted_progress = false;
 
     // No cumulative counter needed with per-block sampling
 
@@ -491,13 +540,13 @@ pub fn run_memory_copy_test(
                 .copy_from_slice(&source_buffer[offset..offset + bytes_to_copy]);
 
             offset += bytes_to_copy;
-            // cumulative counter removed
 
             // Record per-block speed and report progress periodically
             let elapsed = copy_start.elapsed();
             if let Some(current_speed) = stats_tracker.record_block(bytes_to_copy, elapsed) {
                 if let Some(callback) = progress_callback {
                     callback.on_progress("Memory Copy", current_speed);
+                    emitted_progress = true;
                 }
             }
         }
@@ -508,6 +557,13 @@ pub fn run_memory_copy_test(
 
     // Finalize statistics
     let result = stats_tracker.finalize();
+
+    // Fallback: ensure at least one progress emission for very short tests
+    if !emitted_progress {
+        if let Some(callback) = progress_callback {
+            callback.on_progress("Memory Copy", result.avg_speed_mbps);
+        }
+    }
 
     // Report test completion
     if let Some(callback) = progress_callback {
