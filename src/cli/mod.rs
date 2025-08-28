@@ -41,7 +41,7 @@ pub fn run_cli() -> Result<()> {
             disable_direct_io,
             output_format,
         } => {
-            run_benchmark_command(
+            let options = BenchmarkOptions {
                 target_path,
                 sequential_block_size,
                 random_block_size,
@@ -50,15 +50,17 @@ pub fn run_cli() -> Result<()> {
                 enable_cache,
                 disable_direct_io,
                 output_format,
-            )?;
+            };
+            run_benchmark_command(options)?;
         }
     }
 
     Ok(())
 }
 
-/// Run the benchmark command with the specified parameters
-fn run_benchmark_command(
+/// Options for running a benchmark
+#[derive(Debug)]
+struct BenchmarkOptions {
     target_path: std::path::PathBuf,
     sequential_block_size: Option<String>,
     random_block_size: Option<String>,
@@ -67,7 +69,21 @@ fn run_benchmark_command(
     enable_cache: bool,
     disable_direct_io: bool,
     output_format: OutputFormat,
-) -> Result<()> {
+}
+
+/// Run the benchmark command with the specified parameters
+#[allow(clippy::too_many_arguments)]
+fn run_benchmark_command(options: BenchmarkOptions) -> Result<()> {
+    let BenchmarkOptions {
+        target_path,
+        sequential_block_size,
+        random_block_size,
+        duration,
+        file_size,
+        enable_cache,
+        disable_direct_io,
+        output_format,
+    } = options;
     // Create benchmark configuration
     let mut config = BenchmarkConfig::new(target_path);
 
