@@ -3,357 +3,70 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g., 1.2.3)'
-        required: true
-        type: string
-      prerelease:
-        description: 'Mark as pre-release'
-        required: false
-        type: boolean
-        default: false
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+permissions:
+  contents: write
 
 jobs:
-  prepare:
-    name: Prepare Release
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Determine version
-      id: version
-      run: |
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          VERSION="${{ github.event.inputs.version }}"
-          TAG="v${VERSION}"
-        else
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-        fi
-        
-        echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        echo "tag=${TAG}" >> $GITHUB_OUTPUT
-        echo "Version: ${VERSION}"
-        echo "Tag: ${TAG}"
-
-    - name: Validate version
-      run: |
-        VERSION="${{ steps.version.outputs.version }}"
-        if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
-          echo "Invalid version format: $VERSION"
-          exit 1
-        fi
-
-  test:
-    name: Test Suite
-    runs-on: ${{ matrix.os }}
-    needs: prepare
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-        components: rustfmt, clippy
-
-    - name: Cache cargo
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Run tests
-      run: |
-        cargo test --all-features --workspace
-        cargo test --release --all-features --workspace
-
-    - name: Run clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
-
-    - name: Check formatting
-      run: cargo fmt --all -- --check
-
   build:
-    name: Build Release Binaries
-    runs-on: ${{ matrix.job.os }}
-    needs: [prepare, test]
     strategy:
       fail-fast: false
       matrix:
-        job:
-          # Desktop targets
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,    use-cross: false }
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl,   use-cross: true }
-          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu,   use-cross: true }
-          - { os: ubuntu-latest,  target: aarch64-unknown-linux-musl,  use-cross: true }
-          - { os: ubuntu-latest,  target: x86_64-pc-windows-gnu,       use-cross: true }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc,      use-cross: false }
-          - { os: windows-latest, target: aarch64-pc-windows-msvc,     use-cross: false }
-          - { os: macos-latest,   target: x86_64-apple-darwin,         use-cross: false }
-          - { os: macos-latest,   target: aarch64-apple-darwin,        use-cross: false }
-          
-          # Mobile targets (optional, may require additional setup)
-          # - { os: ubuntu-latest,  target: aarch64-linux-android,      use-cross: true }
-          # - { os: ubuntu-latest,  target: armv7-linux-androideabi,    use-cross: true }
-          # - { os: macos-latest,   target: aarch64-apple-ios,          use-cross: false }
-
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.job.target }}
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Install cross
-      if: matrix.job.use-cross
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cross
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
-    - name: Cache cargo
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-${{ matrix.job.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cargo build --release
+          ARCH=$(uname -m)
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          OUT="disk-speed-test-${GITHUB_REF_NAME}-${OS}-${ARCH}.tar.gz"
+          tar -czf "$OUT" -C target/release disk-speed-test
+          echo "ARTIFACT_NAME=$OUT" >> "$GITHUB_ENV"
 
-    - name: Build binary (cross)
-      if: matrix.job.use-cross
-      env:
-        BUILD_TIME: ${{ github.run_id }}
-        GIT_HASH: ${{ github.sha }}
-      run: cross build --target ${{ matrix.job.target }} --release
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cargo build --release
+          $arch = $env:PROCESSOR_ARCHITECTURE
+          $out = "disk-speed-test-$($env:GITHUB_REF_NAME)-windows-$arch.zip"
+          Compress-Archive -Path target/release/disk-speed-test.exe -DestinationPath $out
+          echo "ARTIFACT_NAME=$out" >> $env:GITHUB_ENV
 
-    - name: Build binary (cargo)
-      if: ${{ !matrix.job.use-cross }}
-      env:
-        BUILD_TIME: ${{ github.run_id }}
-        GIT_HASH: ${{ github.sha }}
-      run: cargo build --target ${{ matrix.job.target }} --release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_NAME }}
 
-    - name: Prepare artifacts
-      shell: bash
-      run: |
-        VERSION="${{ needs.prepare.outputs.version }}"
-        TARGET="${{ matrix.job.target }}"
-        
-        # Determine binary extension
-        if [[ $TARGET == *"windows"* ]]; then
-          BINARY_EXT=".exe"
-        else
-          BINARY_EXT=""
-        fi
-        
-        # Create artifact directory
-        ARTIFACT_DIR="disk-speed-test-${VERSION}-${TARGET}"
-        mkdir -p "$ARTIFACT_DIR"
-        
-        # Copy binary
-        cp "target/${TARGET}/release/disk-speed-test${BINARY_EXT}" "$ARTIFACT_DIR/"
-        
-        # Copy additional files
-        cp README.md "$ARTIFACT_DIR/" 2>/dev/null || true
-        cp LICENSE* "$ARTIFACT_DIR/" 2>/dev/null || true
-        
-        # Create version info
-        cat > "$ARTIFACT_DIR/VERSION.txt" << EOF
-        disk-speed-test ${VERSION}
-        Target: ${TARGET}
-        Build Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-        Git Hash: ${{ github.sha }}
-        GitHub Run: ${{ github.run_id }}
-        EOF
-        
-        # Create archive
-        if [[ $TARGET == *"windows"* ]]; then
-          7z a "${ARTIFACT_DIR}.zip" "$ARTIFACT_DIR"
-          echo "ASSET=${ARTIFACT_DIR}.zip" >> $GITHUB_ENV
-        else
-          tar -czf "${ARTIFACT_DIR}.tar.gz" "$ARTIFACT_DIR"
-          echo "ASSET=${ARTIFACT_DIR}.tar.gz" >> $GITHUB_ENV
-        fi
-        
-        # Generate checksums
-        if [[ $TARGET == *"windows"* ]]; then
-          sha256sum "${ARTIFACT_DIR}.zip" > "${ARTIFACT_DIR}.zip.sha256"
-        else
-          sha256sum "${ARTIFACT_DIR}.tar.gz" > "${ARTIFACT_DIR}.tar.gz.sha256"
-        fi
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.job.target }}
-        path: |
-          *.tar.gz
-          *.zip
-          *.sha256
-
-  create-release:
-    name: Create GitHub Release
+  release:
+    needs: build
     runs-on: ubuntu-latest
-    needs: [prepare, build]
-    permissions:
-      contents: write
-    
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
-
-    - name: Prepare release assets
-      run: |
-        mkdir -p release-assets
-        find artifacts -name "*.tar.gz" -o -name "*.zip" -o -name "*.sha256" | xargs -I {} cp {} release-assets/
-        
-        # Create combined checksums file
-        cd release-assets
-        cat *.sha256 > checksums.sha256
-        rm -f *.tar.gz.sha256 *.zip.sha256
-        
-        # List all assets
-        echo "Release assets:"
-        ls -la
-
-    - name: Generate release notes
-      run: |
-        VERSION="${{ needs.prepare.outputs.version }}"
-        TAG="${{ needs.prepare.outputs.tag }}"
-        
-        cat > release-notes.md << EOF
-        # disk-speed-test ${VERSION}
-        
-        ## What's New
-        
-        Cross-platform disk speed testing utility with support for:
-        
-        - **Sequential Read/Write Tests**: Measure sustained throughput performance
-        - **Random Read/Write Tests**: Measure random access performance  
-        - **Memory Copy Tests**: Baseline memory bandwidth comparison
-        - **Real-time Progress**: Live speed monitoring during tests
-        - **Comprehensive Statistics**: P5, P95, and average speeds
-        - **Cross-platform Support**: Windows, macOS, and Linux
-        
-        ## Installation
-        
-        1. Download the appropriate archive for your platform below
-        2. Extract the archive
-        3. Run the \`disk-speed-test\` binary
-        
-        ## Usage
-        
-        \`\`\`bash
-        # List available storage devices
-        disk-speed-test list-devices
-        
-        # Run benchmark on a specific path
-        disk-speed-test benchmark /path/to/test
-        
-        # Run with custom settings
-        disk-speed-test benchmark /path/to/test --duration 30 --file-size 2GB
-        \`\`\`
-        
-        ## Verification
-        
-        Verify the integrity of downloaded files:
-        
-        \`\`\`bash
-        sha256sum -c checksums.sha256
-        \`\`\`
-        
-        ## Build Information
-        
-        - **Version**: ${VERSION}
-        - **Git Hash**: ${{ github.sha }}
-        - **Build Time**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-        - **GitHub Run**: ${{ github.run_id }}
-        EOF
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ needs.prepare.outputs.tag }}
-        name: Release ${{ needs.prepare.outputs.version }}
-        body_path: release-notes.md
-        files: release-assets/*
-        prerelease: ${{ github.event.inputs.prerelease == 'true' }}
-        draft: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish-crates:
-    name: Publish to crates.io
-    runs-on: ubuntu-latest
-    needs: [prepare, test, build]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Cache cargo
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ubuntu-latest-cargo-publish-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Publish to crates.io
-      run: |
-        cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
-      env:
-        CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
-
-  notify:
-    name: Notify Release
-    runs-on: ubuntu-latest
-    needs: [prepare, create-release]
-    if: always()
-    
-    steps:
-    - name: Notify success
-      if: needs.create-release.result == 'success'
-      run: |
-        echo "✅ Release ${{ needs.prepare.outputs.version }} created successfully!"
-        echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag }}"
-
-    - name: Notify failure
-      if: needs.create-release.result == 'failure'
-      run: |
-        echo "❌ Release ${{ needs.prepare.outputs.version }} failed!"
-        exit 1
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
+          tag_name: ${{ github.ref_name }}

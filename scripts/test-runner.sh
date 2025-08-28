@@ -10,6 +10,26 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Determine a portable timeout command (GNU timeout or gtimeout on macOS)
+if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout"
+else
+    TIMEOUT_CMD=""
+fi
+
+# Run a command with optional timeout; falls back to no-timeout if unavailable
+run_with_timeout() {
+    local duration="$1"
+    shift
+    if [[ -n "$TIMEOUT_CMD" ]]; then
+        "$TIMEOUT_CMD" "$duration" "$@"
+    else
+        "$@"
+    fi
+}
+
 # Configuration
 MIN_COVERAGE=80
 MAX_TEST_DURATION=300  # 5 minutes
@@ -101,7 +121,7 @@ run_unit_tests() {
     
     local start_time=$(date +%s)
     
-    if ! timeout "$MAX_TEST_DURATION" cargo test --lib --bins --verbose; then
+    if ! run_with_timeout "$MAX_TEST_DURATION" cargo test --lib --bins --verbose; then
         log_error "Unit tests failed or timed out"
         return 1
     fi
@@ -118,7 +138,7 @@ run_integration_tests() {
     
     local start_time=$(date +%s)
     
-    if ! timeout "$MAX_TEST_DURATION" cargo test --test '*' --verbose; then
+    if ! run_with_timeout "$MAX_TEST_DURATION" cargo test --test '*' --verbose; then
         log_error "Integration tests failed or timed out"
         return 1
     fi
@@ -150,14 +170,15 @@ check_coverage() {
         return 1
     fi
     
-    # Extract coverage percentage
+    # Extract coverage percentage (portable, avoids GNU grep -P)
     local coverage_percent
-    coverage_percent=$(cargo llvm-cov report --summary-only | grep -oP 'TOTAL.*\K\d+\.\d+(?=%)' || echo "0")
+    coverage_percent=$(cargo llvm-cov report --summary-only \
+        | awk '/TOTAL/ {val=$NF} END {gsub("%","",val); if (val=="") print "0"; else print val}')
     
     log_info "Current coverage: ${coverage_percent}%"
     
-    # Check coverage threshold
-    if (( $(echo "$coverage_percent < $MIN_COVERAGE" | bc -l) )); then
+    # Check coverage threshold (portable float comparison via awk)
+    if awk -v a="$coverage_percent" -v b="$MIN_COVERAGE" 'BEGIN {exit !(a<b)}'; then
         log_error "Coverage ${coverage_percent}% is below threshold ${MIN_COVERAGE}%"
         return 1
     fi

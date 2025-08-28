@@ -12,6 +12,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Host detection
+HOST_OS=$(uname -s)
+
 # Configuration
 PROJECT_NAME="disk-speed-test"
 VERSION=${VERSION:-$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')}
@@ -105,8 +108,45 @@ build_target() {
         binary_ext=".exe"
     fi
     
+    # Decide build tool based on host and target compatibility
+    local build_tool="cross"
+    case "$HOST_OS" in
+        Darwin)
+            if [[ $target == *"apple-darwin"* ]]; then
+                build_tool="cargo"
+            else
+                log_warning "Skipping unsupported target on macOS host: $target"
+                return 0
+            fi
+            ;;
+        Linux)
+            if [[ $target == *"apple-darwin"* ]]; then
+                log_warning "Skipping Apple targets on Linux host: $target"
+                return 0
+            fi
+            if [[ $target == *"pc-windows-msvc"* ]]; then
+                log_warning "Skipping Windows MSVC target on Linux host: $target"
+                return 0
+            fi
+            build_tool="cross"
+            ;;
+        MINGW*|MSYS*|CYGWIN*)
+            if [[ $target == *"windows"* ]]; then
+                build_tool="cargo"
+            else
+                log_warning "Skipping non-Windows target on Windows host: $target"
+                return 0
+            fi
+            ;;
+        *)
+            log_warning "Unknown host OS ($HOST_OS). Attempting cross for $target"
+            build_tool="cross"
+            ;;
+    esac
+
     # Build the target
-    if cross build --target "$target" --release; then
+    if { [[ "$build_tool" == "cargo" ]] && cargo build --target "$target" --release; } || \
+       { [[ "$build_tool" == "cross" ]] && cross build --target "$target" --release; }; then
         # Copy binary to build directory
         local binary_name="${PROJECT_NAME}${binary_ext}"
         local target_binary="target/$target/release/$binary_name"
