@@ -13,13 +13,14 @@ jobs:
   coverage:
     name: Code Coverage Analysis
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
+        toolchain: stable
         components: llvm-tools-preview
 
     - name: Install cargo-llvm-cov
@@ -32,23 +33,14 @@ jobs:
       with:
         tool: cargo-nextest
 
-    - name: Cache cargo registry
+    - name: Cache cargo
       uses: actions/cache@v4
       with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Cache cargo index
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Generate code coverage
       run: |
@@ -64,7 +56,7 @@ jobs:
         verbose: true
         token: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Upload coverage reports to Codecov
+    - name: Upload coverage reports to Codecov (no token)
       if: ${{ secrets.CODECOV_TOKEN == '' }}
       uses: codecov/codecov-action@v4
       with:
@@ -80,8 +72,8 @@ jobs:
 
     - name: Coverage Summary
       run: |
-        echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
-        cargo llvm-cov report --summary-only >> $GITHUB_STEP_SUMMARY
+        echo "## Coverage Summary" >> "$GITHUB_STEP_SUMMARY"
+        cargo llvm-cov report --summary-only >> "$GITHUB_STEP_SUMMARY"
 
     - name: Check coverage threshold
       shell: bash
@@ -90,14 +82,14 @@ jobs:
         COVERAGE=$(cargo llvm-cov report --summary-only | awk '/TOTAL/ {print $(NF-1)}' | tr -d '%')
         echo "Current coverage: ${COVERAGE}%"
         THRESHOLD=80.0
-        awk -v cov="$COVERAGE" -v thr="$THRESHOLD" 'BEGIN { if (cov+0 < thr+0) { exit 1 } }' || { echo "❌ Coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"; exit 1; }
+        awk -v cov="$COVERAGE" -v thr="$THRESHOLD" 'BEGIN { if (cov+0 < thr+0) exit 1 }' || { echo "❌ Coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"; exit 1; }
         echo "✅ Coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
 
   coverage-differential:
     name: Differential Coverage
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -106,6 +98,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
+        toolchain: stable
         components: llvm-tools-preview
 
     - name: Install cargo-llvm-cov
@@ -119,6 +112,7 @@ jobs:
 
     - name: Checkout base branch
       run: |
+        git fetch origin ${{ github.base_ref }}
         git checkout ${{ github.base_ref }}
 
     - name: Generate coverage for base
@@ -127,11 +121,9 @@ jobs:
 
     - name: Compare coverage
       run: |
-        # This is a simplified comparison - in practice you'd use a more sophisticated tool
-        echo "## Coverage Comparison" >> $GITHUB_STEP_SUMMARY
-        echo "Base coverage:" >> $GITHUB_STEP_SUMMARY
-        cargo llvm-cov report --summary-only >> $GITHUB_STEP_SUMMARY
-        
+        echo "## Coverage Comparison" >> "$GITHUB_STEP_SUMMARY"
+        echo "Base coverage:" >> "$GITHUB_STEP_SUMMARY"
+        cargo llvm-cov report --summary-only >> "$GITHUB_STEP_SUMMARY"
         git checkout ${{ github.head_ref }}
-        echo "PR coverage:" >> $GITHUB_STEP_SUMMARY
-        cargo llvm-cov report --summary-only >> $GITHUB_STEP_SUMMARY
+        echo "PR coverage:" >> "$GITHUB_STEP_SUMMARY"
+        cargo llvm-cov report --summary-only >> "$GITHUB_STEP_SUMMARY"
