@@ -89,6 +89,10 @@ impl LinuxPlatform {
             "fusectl",
             "selinuxfs",
             "binfmt_misc",
+            "overlay",
+            "squashfs",
+            "ramfs",
+            "rootfs",
         ];
 
         if virtual_fs.contains(&fs_type) {
@@ -99,6 +103,15 @@ impl LinuxPlatform {
         if device.starts_with("/proc")
             || device.starts_with("/sys")
             || device.starts_with("/dev/pts")
+            || device.starts_with("/run")
+            || device.starts_with("/dev/shm")
+            || device == "proc"
+            || device == "sysfs"
+            || device == "tmpfs"
+            || device == "devpts"
+            || device == "overlay"
+            || device == "none"
+            || device == "udev"
         {
             return false;
         }
@@ -429,6 +442,9 @@ mod tests {
             "binfmt_misc",
             "binfmt_misc"
         ));
+        assert!(!LinuxPlatform::is_real_filesystem("overlay", "overlay"));
+        assert!(!LinuxPlatform::is_real_filesystem("none", "tmpfs"));
+        assert!(!LinuxPlatform::is_real_filesystem("udev", "devtmpfs"));
     }
 
     #[test]

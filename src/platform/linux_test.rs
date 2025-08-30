@@ -523,6 +523,9 @@ mod tests {
             "binfmt_misc",
             "binfmt_misc"
         ));
+        assert!(!LinuxPlatform::is_real_filesystem("overlay", "overlay"));
+        assert!(!LinuxPlatform::is_real_filesystem("none", "tmpfs"));
+        assert!(!LinuxPlatform::is_real_filesystem("udev", "devtmpfs"));
 
         // Virtual device paths should be filtered out
         assert!(!LinuxPlatform::is_real_filesystem(
