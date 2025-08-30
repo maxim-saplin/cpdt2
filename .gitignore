@@ -20,3 +20,4 @@ benchmark_*
 
 # Logs
 *.log
+.kiro/settings/mcp.json
