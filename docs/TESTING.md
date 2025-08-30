@@ -61,18 +61,11 @@ The comprehensive test suite (`./scripts/test-runner.sh`) includes:
 
 ### CI/CD Pipeline
 
-The project uses GitHub Actions for automated testing:
-
-- **`.github/workflows/ci.yml`** - Main CI pipeline
-- **`.github/workflows/coverage.yml`** - Code coverage analysis
-
 #### CI Pipeline Features
 
-- **Cross-platform testing** on Ubuntu, Windows, and macOS
-- **Multiple Rust versions** (stable and beta)
 - **Cross-compilation** verification
+- **Cross-platform testing** on Ubuntu, Windows, and macOS
 - **Code coverage** reporting with Codecov integration
-- **Quality gates** with configurable thresholds
 
 ## Test Utilities
 
