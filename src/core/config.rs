@@ -39,7 +39,7 @@ impl Default for BenchmarkConfig {
             test_duration_seconds: 10,
             disable_os_cache: true,
             disable_direct_io: false, // Enable direct I/O by default for performance
-            file_size_mb: 1024, // 1GB
+            file_size_mb: 1024,       // 1GB
         }
     }
 }

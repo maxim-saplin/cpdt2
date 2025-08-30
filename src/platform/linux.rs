@@ -287,7 +287,8 @@ impl PlatformOps for LinuxPlatform {
             .write(true)
             .truncate(true)
             .custom_flags(O_DIRECT | O_SYNC)
-            .open(path) {
+            .open(path)
+        {
             Ok(file) => file,
             Err(e) if e.raw_os_error() == Some(libc::EINVAL) => {
                 // O_DIRECT not supported on this filesystem
@@ -312,7 +313,7 @@ impl PlatformOps for LinuxPlatform {
             options.read(true);
         }
 
-        // Try to open file with O_DIRECT 
+        // Try to open file with O_DIRECT
         let file = match options.custom_flags(O_DIRECT | O_SYNC).open(path) {
             Ok(file) => file,
             Err(e) if e.raw_os_error() == Some(libc::EINVAL) => {

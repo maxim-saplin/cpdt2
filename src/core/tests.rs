@@ -19,37 +19,36 @@ fn effective_test_duration(config: &BenchmarkConfig) -> std::time::Duration {
 /// Create a file for I/O operations, choosing between direct I/O and buffered I/O based on config
 fn create_io_file(
     config: &BenchmarkConfig,
-    path: &Path, 
-    size: u64
+    path: &Path,
+    size: u64,
 ) -> Result<File, BenchmarkError> {
     if config.disable_direct_io {
         // Use standard buffered I/O
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(BenchmarkError::IoError)?;
         }
-        
+
         let file = OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .open(path)
             .map_err(BenchmarkError::IoError)?;
-            
+
         // Pre-allocate the file size for consistency with direct I/O path
         file.set_len(size).map_err(BenchmarkError::IoError)?;
         Ok(file)
     } else {
         // Use direct I/O
-        crate::platform::create_direct_io_file(path, size)
-            .map_err(|e| {
-                // If direct I/O fails, provide a helpful error message
-                match e {
-                    crate::platform::PlatformError::DirectIoNotSupported => {
-                        BenchmarkError::PlatformError(e)
-                    }
-                    _ => BenchmarkError::PlatformError(e)
+        crate::platform::create_direct_io_file(path, size).map_err(|e| {
+            // If direct I/O fails, provide a helpful error message
+            match e {
+                crate::platform::PlatformError::DirectIoNotSupported => {
+                    BenchmarkError::PlatformError(e)
                 }
-            })
+                _ => BenchmarkError::PlatformError(e),
+            }
+        })
     }
 }
 
@@ -57,7 +56,7 @@ fn create_io_file(
 fn open_io_file(
     config: &BenchmarkConfig,
     path: &Path,
-    write: bool
+    write: bool,
 ) -> Result<File, BenchmarkError> {
     if config.disable_direct_io {
         // Use standard buffered I/O
@@ -70,16 +69,15 @@ fn open_io_file(
         options.open(path).map_err(BenchmarkError::IoError)
     } else {
         // Use direct I/O
-        crate::platform::open_direct_io_file(path, write)
-            .map_err(|e| {
-                // If direct I/O fails, provide a helpful error message
-                match e {
-                    crate::platform::PlatformError::DirectIoNotSupported => {
-                        BenchmarkError::PlatformError(e)
-                    }
-                    _ => BenchmarkError::PlatformError(e)
+        crate::platform::open_direct_io_file(path, write).map_err(|e| {
+            // If direct I/O fails, provide a helpful error message
+            match e {
+                crate::platform::PlatformError::DirectIoNotSupported => {
+                    BenchmarkError::PlatformError(e)
                 }
-            })
+                _ => BenchmarkError::PlatformError(e),
+            }
+        })
     }
 }
 
