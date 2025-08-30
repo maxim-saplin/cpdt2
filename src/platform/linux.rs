@@ -425,7 +425,10 @@ mod tests {
         assert!(!LinuxPlatform::is_real_filesystem("sysfs", "sysfs"));
         assert!(!LinuxPlatform::is_real_filesystem("tmpfs", "tmpfs"));
         assert!(!LinuxPlatform::is_real_filesystem("devpts", "devpts"));
-        assert!(!LinuxPlatform::is_real_filesystem("binfmt_misc", "binfmt_misc"));
+        assert!(!LinuxPlatform::is_real_filesystem(
+            "binfmt_misc",
+            "binfmt_misc"
+        ));
     }
 
     #[test]
