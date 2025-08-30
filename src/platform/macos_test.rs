@@ -4,9 +4,9 @@
 mod tests {
     #[cfg(target_os = "macos")]
     use super::super::macos::MacOsPlatform;
-    use super::super::{DeviceType, PlatformError};
     #[cfg(target_os = "macos")]
     use super::super::PlatformOps;
+    use super::super::{DeviceType, PlatformError};
     #[cfg(target_os = "macos")]
     use std::fs;
     #[cfg(target_os = "macos")]

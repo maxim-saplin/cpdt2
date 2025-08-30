@@ -17,7 +17,7 @@
   - Set up Ubuntu runner configuration
   - _Requirements: 1.1, 2.1_
 
-- [-] 4. Test basic CI workflow execution
+- [ ] 4. Test basic CI workflow execution
   - Commit and push workflow file to trigger CI
   - Verify workflow appears in GitHub Actions tab
   - Check that workflow syntax is valid
