@@ -518,6 +518,7 @@ mod tests {
         assert!(!LinuxPlatform::is_real_filesystem("devpts", "devpts"));
         assert!(!LinuxPlatform::is_real_filesystem("cgroup", "cgroup"));
         assert!(!LinuxPlatform::is_real_filesystem("cgroup2", "cgroup2"));
+        assert!(!LinuxPlatform::is_real_filesystem("binfmt_misc", "binfmt_misc"));
 
         // Virtual device paths should be filtered out
         assert!(!LinuxPlatform::is_real_filesystem(
