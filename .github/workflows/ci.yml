@@ -64,12 +64,12 @@ jobs:
     - name: Prepare binary for upload
       run: |
         mkdir -p artifacts
-        cp target/release/disk-speed-test artifacts/disk-speed-test-x86_64-unknown-linux-gnu
+        cp target/release/disk-speed-test artifacts/disk-speed-test-linux-x86_64
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: binary-x86_64-unknown-linux-gnu
+        name: linux-x86_64
         path: artifacts/
         retention-days: 7
 
@@ -91,12 +91,12 @@ jobs:
     - name: Prepare binary for upload
       run: |
         New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-        Copy-Item target/release/disk-speed-test.exe artifacts/disk-speed-test-x86_64-pc-windows-msvc.exe
+        Copy-Item target/release/disk-speed-test.exe artifacts/disk-speed-test-windows-x86_64.exe
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: binary-x86_64-pc-windows-msvc
+        name: windows-x86_64
         path: artifacts/
         retention-days: 7
 
@@ -118,11 +118,11 @@ jobs:
     - name: Prepare binary for upload
       run: |
         mkdir -p artifacts
-        cp target/release/disk-speed-test artifacts/disk-speed-test-x86_64-apple-darwin
+        cp target/release/disk-speed-test artifacts/disk-speed-test-macos-x86_64
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: binary-x86_64-apple-darwin
+        name: macos-x86_64
         path: artifacts/
         retention-days: 7
