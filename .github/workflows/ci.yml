@@ -50,6 +50,8 @@ jobs:
     name: Build Cross-Platform Binaries
     runs-on: ubuntu-latest
     needs: quality-gates
+    env:
+      CROSS_NO_WARNINGS: "0"
     
     strategy:
       matrix:
