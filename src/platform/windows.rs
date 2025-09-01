@@ -2,7 +2,7 @@
 
 use std::ffi::OsString;
 use std::fs::File;
-use std::os::windows::ffi::OsStringExt;
+use std::os::windows::ffi::OsStrExt;
 use std::os::windows::io::{AsRawHandle, FromRawHandle};
 use std::path::{Path, PathBuf};
 use std::ptr;
@@ -10,17 +10,16 @@ use winapi::shared::minwindef::{DWORD, FALSE};
 use winapi::shared::winerror::{ERROR_INSUFFICIENT_BUFFER, ERROR_SUCCESS};
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{
-    CreateFileW, FlushFileBuffers, GetDiskFreeSpaceExW, SetEndOfFile, SetFilePointerEx,
+    CreateFileW, FlushFileBuffers, GetDiskFreeSpaceExW, GetDriveTypeW, GetLogicalDrives,
+    CREATE_ALWAYS, OPEN_EXISTING,
 };
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use winapi::um::winbase::{
-    GetDriveTypeW, GetLogicalDrives, DRIVE_CDROM, DRIVE_FIXED, DRIVE_RAMDISK, DRIVE_REMOTE,
-    DRIVE_REMOVABLE, DRIVE_UNKNOWN, FILE_FLAG_NO_BUFFERING, FILE_FLAG_SEQUENTIAL_SCAN,
-    FILE_FLAG_WRITE_THROUGH,
+    DRIVE_CDROM, DRIVE_FIXED, DRIVE_RAMDISK, DRIVE_REMOTE, DRIVE_REMOVABLE, DRIVE_UNKNOWN,
+    FILE_FLAG_NO_BUFFERING, FILE_FLAG_SEQUENTIAL_SCAN, FILE_FLAG_WRITE_THROUGH,
 };
 use winapi::um::winnt::{
-    CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ,
-    GENERIC_WRITE, LARGE_INTEGER, OPEN_EXISTING,
+    FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE,
 };
 
 use super::{DeviceType, PlatformError, PlatformOps, StorageDevice};
@@ -44,6 +43,7 @@ impl WindowsPlatform {
     /// Get disk space information for a drive
     fn get_disk_space(drive_path: &str) -> Result<(u64, u64), PlatformError> {
         let wide_path: Vec<u16> = OsString::from(drive_path)
+            .as_os_str()
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
@@ -77,32 +77,7 @@ impl WindowsPlatform {
 
     /// Set file size using Windows API
     fn set_file_size(file: &File, size: u64) -> Result<(), PlatformError> {
-        let handle = file.as_raw_handle();
-
-        unsafe {
-            // Set file pointer to the desired size
-            let mut distance = LARGE_INTEGER::default();
-            *distance.QuadPart_mut() = size as i64;
-
-            let result = SetFilePointerEx(
-                handle as winapi::um::winnt::HANDLE,
-                distance,
-                ptr::null_mut(),
-                winapi::um::winbase::FILE_BEGIN,
-            );
-
-            if result == FALSE {
-                return Err(PlatformError::IoError(std::io::Error::last_os_error()));
-            }
-
-            // Set end of file at current position
-            let result = SetEndOfFile(handle as winapi::um::winnt::HANDLE);
-            if result == FALSE {
-                return Err(PlatformError::IoError(std::io::Error::last_os_error()));
-            }
-        }
-
-        Ok(())
+        file.set_len(size).map_err(PlatformError::IoError)
     }
 }
 
@@ -127,6 +102,7 @@ impl PlatformOps for WindowsPlatform {
 
                     // Convert to wide string for Windows API
                     let wide_path: Vec<u16> = OsString::from(&drive_root)
+                        .as_os_str()
                         .encode_wide()
                         .chain(std::iter::once(0))
                         .collect();
