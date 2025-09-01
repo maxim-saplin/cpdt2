@@ -211,7 +211,7 @@ impl ProgressCallback for CliProgressCallback {
 
                 println!("  {} {} complete", checkmark, colored_name);
                 println!(
-                    "    P5: {} | P95: {} | Avg: {}",
+                    "    Min (P5): {} | Max (P95): {} | Avg: {}",
                     self.colorize(&min_speed, "37"), // Light gray
                     self.colorize(&max_speed, "37"), // Light gray
                     bold_avg
@@ -403,21 +403,19 @@ fn display_results_table(results: &BenchmarkResults) {
     );
     println!();
 
-    // Table header with better formatting
-    println!(
-        "{:<20} {:>12} {:>12} {:>12} {:>10} {:>8}",
-        colorize("Test", "1;37"),       // Bold white
-        colorize("P5 (MB/s)", "37"),    // Light gray
-        colorize("P95 (MB/s)", "37"),   // Light gray
-        colorize("Avg (MB/s)", "1;33"), // Bold yellow for average
-        colorize("Duration", "37"),     // Light gray
-        colorize("Samples", "37")
-    ); // Light gray
+    // Table header with better formatting (match row widths)
+    let h_test = colorize(&format!("{:<30}", "Test"), "1;37");
+    let h_min = colorize(&format!("{:>12}", "Min (MB/s)"), "37");
+    let h_max = colorize(&format!("{:>12}", "Max (MB/s)"), "37");
+    let h_avg = colorize(&format!("{:>12}", "Avg (MB/s)"), "1;33");
+    println!("{} {} {} {}", h_test, h_min, h_max, h_avg);
 
+    // Separator length matches visible table width: 30 + 12 + 12 + 12 + 3 spaces = 69
+    let separator_width = 69;
     let separator = if use_colors {
-        colorize(&"─".repeat(80), "37")
+        colorize(&"─".repeat(separator_width), "37")
     } else {
-        "-".repeat(80)
+        "-".repeat(separator_width)
     };
     println!("{}", separator);
 
@@ -484,7 +482,7 @@ pub fn display_test_result_enhanced(test_name: &str, result: &TestResult, use_co
         }
     };
 
-    let format_duration = |duration: Duration| -> String {
+    let _format_duration = |duration: Duration| -> String {
         let total_secs = duration.as_secs();
         if total_secs >= 60 {
             let mins = total_secs / 60;
@@ -495,30 +493,27 @@ pub fn display_test_result_enhanced(test_name: &str, result: &TestResult, use_co
         }
     };
 
-    // Color code the test name based on performance
+    // Pad the test name BEFORE applying color so visible width matches the column
+    let padded_test_name = format!("{:<30}", test_name);
     let colored_test_name = if result.avg_speed_mbps > 100.0 {
-        colorize(test_name, "1;32") // Green for good performance
+        colorize(&padded_test_name, "1;32") // Green for good performance
     } else if result.avg_speed_mbps > 10.0 {
-        colorize(test_name, "1;33") // Yellow for moderate performance
+        colorize(&padded_test_name, "1;33") // Yellow for moderate performance
     } else if result.avg_speed_mbps > 0.0 {
-        colorize(test_name, "1;31") // Red for poor performance
+        colorize(&padded_test_name, "1;31") // Red for poor performance
     } else {
-        colorize(test_name, "1;90") // Dark gray for failed tests
+        colorize(&padded_test_name, "1;90") // Dark gray for failed tests
     };
 
     // Make average speed bold as per requirement 11.2
     let bold_avg = colorize(&format!("{:>12.2}", result.avg_speed_mbps), "1");
 
-    let duration_str = format_duration(result.test_duration);
-
     println!(
-        "{:<30} {:>12.2} {:>12.2} {} {:>10} {:>8}",
+        "{} {:>12.2} {:>12.2} {}",
         colored_test_name,
         result.min_speed_mbps,
         result.max_speed_mbps,
-        bold_avg,
-        duration_str,
-        result.sample_count
+        bold_avg
     );
 }
 
