@@ -53,6 +53,16 @@ impl LinuxPlatform {
                 let mount_point = parts[1];
                 let fs_type = parts[2];
 
+                // Skip obviously virtual/system mount prefixes early for CI containers
+                if mount_point.starts_with("/proc")
+                    || mount_point.starts_with("/sys")
+                    || mount_point.starts_with("/dev/pts")
+                    || mount_point.starts_with("/run")
+                    || mount_point.starts_with("/dev/shm")
+                {
+                    continue;
+                }
+
                 // Skip virtual filesystems and special mounts
                 if Self::is_real_filesystem(device, fs_type) {
                     mounts.push(MountInfo {
@@ -93,6 +103,11 @@ impl LinuxPlatform {
             "squashfs",
             "ramfs",
             "rootfs",
+            // Additional commonly seen virtual filesystems in CI/container envs
+            "autofs",
+            "nsfs",
+            "rpc_pipefs",
+            "devtmpfs",
         ];
 
         if virtual_fs.contains(&fs_type) {
