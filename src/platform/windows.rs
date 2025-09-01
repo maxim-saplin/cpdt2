@@ -10,7 +10,7 @@ use winapi::shared::minwindef::{DWORD, FALSE};
 use winapi::shared::winerror::{ERROR_INSUFFICIENT_BUFFER, ERROR_SUCCESS};
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{
-    CreateFileW, FlushFileBuffers, GetDiskFreeSpaceExW, GetDriveTypeW, GetLogicalDrives,
+    CreateFileW, FlushFileBuffers, GetDiskFreeSpaceW, GetDriveTypeW, GetLogicalDrives,
     CREATE_ALWAYS, OPEN_EXISTING,
 };
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
@@ -48,21 +48,28 @@ impl WindowsPlatform {
             .chain(std::iter::once(0))
             .collect();
 
-        let mut free_bytes = 0u64;
-        let mut total_bytes = 0u64;
+        let mut sectors_per_cluster: DWORD = 0;
+        let mut bytes_per_sector: DWORD = 0;
+        let mut number_of_free_clusters: DWORD = 0;
+        let mut total_number_of_clusters: DWORD = 0;
 
         unsafe {
-            let result = GetDiskFreeSpaceExW(
+            let result = GetDiskFreeSpaceW(
                 wide_path.as_ptr(),
-                &mut free_bytes,
-                &mut total_bytes,
-                ptr::null_mut(),
+                &mut sectors_per_cluster,
+                &mut bytes_per_sector,
+                &mut number_of_free_clusters,
+                &mut total_number_of_clusters,
             );
 
             if result == FALSE {
                 return Err(PlatformError::IoError(std::io::Error::last_os_error()));
             }
         }
+
+        let bytes_per_cluster = (sectors_per_cluster as u64) * (bytes_per_sector as u64);
+        let total_bytes = (total_number_of_clusters as u64) * bytes_per_cluster;
+        let free_bytes = (number_of_free_clusters as u64) * bytes_per_cluster;
 
         Ok((total_bytes, free_bytes))
     }
